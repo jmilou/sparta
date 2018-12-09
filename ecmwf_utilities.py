@@ -21,9 +21,6 @@ import pandas as pd
 
 path = os.path.join(os.path.dirname(os.path.abspath(__file__)),'sparta_data')
 filename = 'ecmwf_profile_200mbar_2015-nov2018.csv'
-
-#filename = 'ecmwf_profile_200mbar_combined.csv'
-#filename = 'ecmwf_profile_200mbar_2015-2016.csv'
 pd_ecmwf= pd.read_csv(os.path.join(path,filename),na_values=-9999.0)#,sep='\t')
 #pd_ecmwf= pd.read_csv(os.path.join(path,filename),na_values=-9999.0,sep='\t')
 #pd_ecmwf.head()

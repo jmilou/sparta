@@ -11,10 +11,9 @@ import numpy as np
 import matplotlib.pyplot as plt
 import glob
 from matplotlib.colors import LogNorm,SymLogNorm
-path_sparta = os.path.dirname(os.path.abspath(__file__))    
 from astropy.time import Time
 import pandas as pd
-#path_sparta = '/Users/jmilli/Dropbox/lib_py/sparta'
+path_sparta = os.path.join(os.path.dirname(os.path.abspath(__file__)),'sparta_data')
 
 def DMvect2map(v,visu=True):
     """

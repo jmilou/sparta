@@ -15,6 +15,20 @@ from astropy.time import Time
 import pandas as pd
 path_sparta = os.path.join(os.path.dirname(os.path.abspath(__file__)),'sparta_data')
 
+def save_unix_times(array_seconds,filename=None):
+    """
+    Functions that takes in input an array with the times in the unix format 
+    (in seconds) and converts it to the iso format and save the result as 
+    a csv file and returns a panda array.
+    """
+    TimesList = Time(array_seconds,format='unix')
+    TimesList.format = 'iso'
+    date_iso_str = [str(s) for s in TimesList]
+    pd_time = pd.DataFrame({'Date_ISO':date_iso_str,'Date_unix':array_seconds})
+    if filename is not None:
+        pd_time.to_csv(filename)
+    return pd_time    
+
 def DMvect2map(v,visu=True):
     """
     Takes in input a 1D vector of 1377 elements and map it to the DM actuator map
@@ -33,20 +47,6 @@ def DMvect2map(v,visu=True):
         fig.colorbar(im)
         ax.set_title('Map of the DM')
     return DM_map
-
-def save_unix_times(array_seconds,filename=None):
-    """
-    Functions that takes in input an array with the times in the unix format 
-    (in seconds) and converts it to the iso format and save the result as 
-    a csv file and returns a panda array.
-    """
-    TimesList = Time(array_seconds,format='unix')
-    TimesList.format = 'iso'
-    date_iso_str = [str(s) for s in TimesList]
-    pd_time = pd.DataFrame({'Date_ISO':date_iso_str,'Date_unix':array_seconds})
-    if filename is not None:
-        pd_time.to_csv(filename)
-    return pd_time    
 
 def DMpositions2cube(v,path='.',subtractBias=True,name='HODM_cube.fits',binning=20):
     """
@@ -86,6 +86,25 @@ def SHvect2map(v,visu=True):
         fig.colorbar(im)
         ax.set_title('Map of the Shack-Hartmann')
     return SH_map    
+
+def SHvects2cube(v,path='.',name='SH_Intensities_cube.fits',binning=20):
+    """
+    Similar to SHvect2map but it acts on a 2d array of size N by 1240 and makes 
+    a cube. The cube is saved in a fits file.
+    """
+    nb_time_stamps = v.shape[0]
+    if v.shape[1] != 1240:
+        raise IOError('The input vector must have 1240 elements (currently {0:d})'.format(v.shape[1]))
+    SH_mask = fits.getdata(os.path.join(path_sparta,'shack.grid.fits'))
+    SH_cube = np.ndarray((int(nb_time_stamps/binning),SH_mask.shape[0],SH_mask.shape[1]),dtype=float)
+    for i in range(int(nb_time_stamps/binning)):
+        SH_map = np.ones_like(SH_mask,dtype=float)
+        SH_map[SH_mask==0] = np.nan
+        SH_map[SH_mask>0] = v[i,:]
+        SH_map = np.fliplr(np.rot90(SH_map,-3))
+        SH_cube[i,:,:]=SH_map
+    fits.writeto(os.path.join(path,name),SH_cube,overwrite=True)
+    return SH_cube    
     
 def SHslopes2map(slopes,visu=True):
     """

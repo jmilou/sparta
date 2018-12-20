@@ -32,7 +32,9 @@ from astropy.coordinates import SkyCoord
 import pdb # for debugging purposes
 from query_eso_archive import query_simbad
 from ecmwf_utilities import request_ecmwf
-
+#from astropy.utils.iers import conf
+#conf.auto_max_age = None
+  
 # Definition of the UT3 coordinates
 latitude =  -24.6268*u.degree
 longitude = -70.4045*u.degree  
@@ -86,7 +88,11 @@ def plot_sparta_data(path_raw='.',path_output=None,plot=True,debug=True):
         header = hdu_list[0].header
         try:
 #            if header['HIERARCH ESO DPR TYPE'] != 'OBJECT,AO':
-            if header['HIERARCH ESO DPR TYPE'] != 'OBJECT,AO' or header['HIERARCH ESO OBS PROG ID'] == 'Maintenance':
+            if header['HIERARCH ESO DPR TYPE'] != 'OBJECT,AO' or \
+                    header['HIERARCH ESO OBS PROG ID'] == 'Maintenance' or \
+                    len(hdu_list)<2:
+                if debug:
+                    print('Bad file {0:1}'.format(files[i][files[i].index('SPHER'):]))
                 continue 
         except: #if these keywords are not in the header we skip this file
             continue

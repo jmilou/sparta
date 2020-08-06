@@ -491,8 +491,4 @@ def IRPixelRecorder2cube(BinTableHDU,save=None):
     return cube    
     
 if __name__ == '__main__':
-    
-    path_test = '/Users/jmilli/Documents/internships/cpannetier/LWE_detection'
-    cube_DTTS= fits.getdata(os.path.join(path_test,'DTTS_cube_2015-10-03.fits'))
-    plot_DTTS_image(cube_DTTS,indices=[2,100,300,499],path=path_test)
-
+    print('Test')    

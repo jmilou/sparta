@@ -71,6 +71,7 @@ def plot_sparta_data(path_raw='.',path_output=None,plot=True,debug=True):
     r0=[]# list of r0
     windSpeed=[] # list of wind speed
     strehl=[] # list of strehl
+    file_atmos = [] # list of fits files names 
     sec_VisLoop=[] # list of strings in unix format for time of 
     flux_VisLoop=[] # list of fluxes for the visible WFS
     sec_IRLoop=[] # list of strings in unix format for time of 
@@ -108,18 +109,20 @@ def plot_sparta_data(path_raw='.',path_output=None,plot=True,debug=True):
         coords = np.append(coords,coords_J2000)
         if debug:
             print('Reading {0:1}'.format(files[i][files[i].index('SPHER'):]))
+            print('   AO mode: {0:s}'.format(wfs_mode))            
         AtmPerfParams = hdu_list[1].data # We read the atmospheric data
         if len(AtmPerfParams["Sec"]) > 0:
             sec_atmos = np.append(sec_atmos, AtmPerfParams["Sec"]) # AtmPerfParams["Sec"] is a list hence this syntax
             r0 = np.append(r0,AtmPerfParams["R0"])
             windSpeed = np.append(windSpeed,AtmPerfParams["WindSpeed"])
             strehl = np.append(strehl,AtmPerfParams["StrehlRatio"])
+            file_atmos = np.append(file_atmos,np.repeat(files[i],len(AtmPerfParams["Sec"])))
             date_start_tmp = np.min([date_start_tmp,Time(AtmPerfParams["Sec"][0],format='unix')])
             obstimes = Time(AtmPerfParams["Sec"],format='unix')
             for obstime in obstimes:
                 current_coords_altaz = coords_J2000.transform_to(coordinates.AltAz(obstime=obstime,location=location))
-                altitude=np.append(altitude,current_coords_altaz.alt)
-                airmass = np.append(airmass,current_coords_altaz.secz)
+                altitude=np.append(altitude,current_coords_altaz.alt.value)
+                airmass = np.append(airmass,current_coords_altaz.secz.value)
             if debug:
                 print('   {0:3d} atmospheric parameters'.format(len(AtmPerfParams["Sec"])))
         VisLoopParams=hdu_list[2].data
@@ -169,9 +172,21 @@ def plot_sparta_data(path_raw='.',path_output=None,plot=True,debug=True):
     cube_DTTS = np.resize(cube_DTTS,(len(cube_DTTS)//(32*32),32,32))
 
     # We double check that the atmospheric values are valid
-    strehl[np.logical_or(strehl>0.98,strehl<0.05)]=np.nan
-    r0[np.logical_or(r0>0.9,r0<=0.)]=np.nan
-    windSpeed[np.logical_or(windSpeed>50,windSpeed<=0)]=np.nan
+    bad_strehl = np.logical_or(strehl>0.98,strehl<0.05)
+    if np.any(bad_strehl):         
+        if debug:
+            print('   {0:d} bad strehl measurements were detected:'.format(np.sum(bad_strehl)),strehl[bad_strehl])
+        strehl[bad_strehl]=np.nan            
+    bad_r0 = np.logical_or(r0>0.9,r0<=0.)
+    if np.any(bad_r0):         
+        if debug:
+            print('   {0:d} bad r0 measurements were detected:'.format(np.sum(bad_r0)),r0[bad_r0])
+        r0[bad_r0]=np.nan            
+    bad_windSpeed = np.logical_or(windSpeed>50,windSpeed<=0)
+    if np.any(bad_windSpeed):         
+        if debug:
+            print('   {0:d} bad equivalent wind velocity measurements were detected:'.format(np.sum(bad_windSpeed)),windSpeed[bad_windSpeed])
+            windSpeed[bad_windSpeed]=np.nan
 
     print('We read in total {0:d} atmospheric parameters among which {1:d=.0f} are valid.'.format(len(time_atmos),np.sum(np.isfinite(strehl)*1.)))
     print('We read in total {0:d} VisLoop parameters'.format(len(time_VisLoop)))
@@ -319,15 +334,19 @@ def plot_sparta_data(path_raw='.',path_output=None,plot=True,debug=True):
     flux_VisLoop_function = interp1d(time_VisLoop.mjd,flux_VisLoop,kind='linear',bounds_error=False,fill_value=flux_VisLoop[0])
     flux_VisLoop_interpolated = flux_VisLoop_function(time_atmos.mjd) 
 
-    atmos_param_df = pd.DataFrame({'date':time_atmos,'tau0_los_sparta':tau0,'seeing_los_sparta':seeing,\
-                                   'wind_speed_los_sparta':windSpeed,'r0_los_sparta':r0,'strehl_sparta':strehl,\
-                                   'interpolated_flux_VisLoop[#photons/aperture]':flux_VisLoop_interpolated,
-                                   'airmass_sparta':airmass,'altitude_sparta':altitude})
+    atmos_param_df = pd.DataFrame({'date':time_atmos,'tau0_los_sparta':tau0,\
+                                   'seeing_los_sparta':seeing,\
+                                   'wind_speed_los_sparta':windSpeed,\
+                                   'r0_los_sparta':r0,'strehl_sparta':strehl,\
+                                   'interpolated_flux_VisLoop[#photons/aperture]':flux_VisLoop_interpolated,\
+                                   'airmass_sparta':airmass,'altitude_sparta':altitude,\
+                                   'sparta_file':file_atmos})
     # we compute the zenith seeing: seeing(zenith) = seeing(AM) AM^(3/5)
     atmos_param_df['seeing_zenith_sparta'] = atmos_param_df['seeing_los_sparta']/np.power(atmos_param_df['airmass_sparta'],3./5.)
     atmos_param_df['r0_zenith_sparta'] = atmos_param_df['r0_los_sparta']*np.power(atmos_param_df['airmass_sparta'],3./5.)
     atmos_param_df['tau0_zenith_sparta'] = atmos_param_df['tau0_los_sparta']*np.power(atmos_param_df['airmass_sparta'],3./5.)
     atmos_param_df.to_csv(os.path.join(path_output,'sparta_atmospheric_params_{0:s}.csv'.format(str(current_night))),index=False)
+
     IRLoop_df = pd.DataFrame({'date':time_IRLoop,'flux_IRLoop_ADU':flux_IRLoop})
     IRLoop_df.to_csv(os.path.join(path_output,'sparta_IR_DTTS_{0:s}.csv'.format(str(current_night))),index=False)
     VisLoop_df = pd.DataFrame({'date':time_VisLoop,'flux_VisLoop[#photons/aperture]':flux_VisLoop})

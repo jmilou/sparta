@@ -29,7 +29,7 @@ warnings.filterwarnings("ignore",category=UserWarning)
 warnings.simplefilter('ignore',category=AstropyWarning)
 from astropy.coordinates import SkyCoord
 #from astropy.coordinates import Galactic, FK5
-import pdb # for debugging purposes
+# import pdb # for debugging purposes
 from query_eso_archive import query_simbad
 from ecmwf_utilities import request_ecmwf
 #from astropy.utils.iers import conf
@@ -784,7 +784,7 @@ def plot_sparta_data(path_raw='.',path_output=None,plot=True,debug=True):
         else:
             ax5.fill_between([time_file[-1].plot_date,time_atmos[-1].plot_date],min_y,max_y, facecolor='blue', alpha=0.1)            
         for i,time_filei in enumerate(time_file):
-            ax5.text(time_filei.plot_date, max_y-(max_y-min_y)*0.02,new_name[i], fontsize=10,rotation=90)#min_y+(max_y-min_y)/5.
+            ax5.text(time_filei.plot_date, max_y-(max_y-min_y)*0.3,new_name[i], fontsize=10,rotation=90)#min_y+(max_y-min_y)/5.
         for tick in ax5.get_xticklabels():
             tick.set_rotation(45)
         ax5.grid()

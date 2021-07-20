@@ -243,7 +243,7 @@ def query_simbad(date,coords,name=None,debug=True,limit_G_mag=15):
         nb_stars = len(validSearch)    
         
     if nb_stars==0:
-        print('No star identified for the pointing position.')
+        print('No star identified for the pointing position. Querying the target name')
         # get the star from target name if we have it in the text file.
         simbad_dico = get_dico_star_properties_from_simbad_target_name_search(name,customSimbad)
         # if we found a star, we add the distance between ICRS coordinates and pointing
@@ -264,7 +264,7 @@ def query_simbad(date,coords,name=None,debug=True,limit_G_mag=15):
             print('One star found: {0:s} with G={1:.1f}'.format(\
                   validSearch['MAIN_ID'][i_min],validSearch['FLUX_G'][i_min]))
         else:
-            print('{0:d} stars identified within {1:.0f} or {2:2f} arcsec. Querying the target name'.format(nb_stars,search_radius.value,search_radius_alt.value)) 
+            print('{0:d} stars identified within {1:.0f} or {2:.0f} arcsec. Querying the target name'.format(nb_stars,search_radius.value,search_radius_alt.value)) 
             # First we query the target name
             simbad_dico = get_dico_star_properties_from_simbad_target_name_search(name,customSimbad)
             if ('simbad_MAIN_ID' in simbad_dico):

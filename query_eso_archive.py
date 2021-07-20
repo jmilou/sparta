@@ -12,10 +12,12 @@ import subprocess
 from scipy.interpolate import interp1d
 import matplotlib.pyplot as plt
 from astroquery.simbad import Simbad
+from astroquery.gaia import Gaia
 import astropy.coordinates as coord
 import astropy.units as u
 from astropy.time import Time
-from astropy.coordinates import ICRS, Galactic, FK4, FK5
+from astropy.coordinates import ICRS, FK5 #,FK4, Galactic
+Gaia.MAIN_GAIA_TABLE = "gaiaedr3.gaia_source" # Select early Data Release 3
 path_data = os.path.join(os.path.dirname(os.path.abspath(__file__)),'sparta_data')
 
 def query_dimm(path,start_date='2017-04-28T00:00:00.00',\
@@ -194,35 +196,52 @@ def query_simbad(date,coords,name=None,debug=True):
         - a dictionary with the most interesting simbad keywords.
     """
     search_radius = 10*u.arcsec # we search in a 10arcsec circle.
-    search_radius_alt = 20*u.arcsec # in case nothing is found, we enlarge the search
+    search_radius_alt = 210*u.arcsec # in case nothing is found, we enlarge the search
+        # we use 210 arcsec because Barnard star (higher PM star moves by 10arcsec/yr --> 210 arcsec in 21yrs)
     customSimbad = Simbad()
-    customSimbad.add_votable_fields('flux(V)','flux(R)','flux(I)','flux(J)','flux(H)',\
+    customSimbad.add_votable_fields('flux(V)','flux(R)','flux(G)','flux(I)','flux(J)','flux(H)',\
                                     'flux(K)','id(HD)','sp','otype','otype(V)','otype(3)',\
                                    'propermotions','ra(2;A;ICRS;J2000;2000)',\
                                  'dec(2;D;ICRS;J2000;2000)',\
                                  'ra(2;A;FK5;J{0:.3f};2000)'.format(date.jyear),\
                                  'dec(2;D;FK5;J{0:.3f};2000)'.format(date.jyear))
+    # First we do a cone search around he coordinates
     search = customSimbad.query_region(coords,radius=search_radius)
-    if search is None and name is not None:
+    
+    if search is None and name is None:
+        # If the cone search failed and no name is provided we cannot do anything more
+        print('No star identified for the RA/DEC pointing. Enlarging the search to {0:.0f} arcsec'.format(search_radius_alt.value))
+        search = customSimbad.query_region(coords,radius=search_radius_alt)
+        if search is None:
+            print('No star identified for the RA/DEC pointing. Stopping the search.')
+            return None
+        else:
+            validSearch = search[search['FLUX_G']<15.]
+            nb_stars = len(validSearch)                
+        
+    elif search is None and name is not None:
+        # If the cone search failed but a name is provided, we query that name
         print('No star identified within {0:.0f} arcsec of the RA/DEC pointing. Querying the target name {1:s}'.format(search_radius.to(u.arcsec).value,name))
         # get the star from target name
         simbad_dico = get_dico_star_properties_from_simbad_target_name_search(name,customSimbad)
         if 'simbad_FLUX_V' in simbad_dico.keys():  
-            nb_stars = -1 # nothing else to be done.
+            nb_stars = -1 # nothing else to be done! 
             print('Star {0:s} identified using the target name'.format(simbad_dico['simbad_MAIN_ID']))
         else:
             print('No star corresponding to the target name {0:s}. Enlarging the search to {1:.0f} arcsec'.format(name,search_radius_alt.value))
             search = customSimbad.query_region(coords,radius=search_radius_alt)
             if search is None:
                 print('No star identified for the RA/DEC pointing. Stopping the search.')
-                nb_stars = 0
+                return None
             else:
-                validSearch = search[search['FLUX_V']<16.]
+                validSearch = search[search['FLUX_G']<15.]
                 nb_stars = len(validSearch)                
     else:
+        # If the cone search returned some results, we count the valid candidates.
         nb_stars = len(search)
-        validSearch = search[search['FLUX_V']<16.]
+        validSearch = search[search['FLUX_G']<15.]
         nb_stars = len(validSearch)    
+        
     if nb_stars==0:
         print('No star identified for the pointing position.')
         # get the star from target name if we have it in the text file.
@@ -243,9 +262,9 @@ def query_simbad(date,coords,name=None,debug=True):
         if nb_stars ==1:
             i_min=0
             print('One star found: {0:s} with V={1:.1f}'.format(\
-                  validSearch['MAIN_ID'][i_min].decode('UTF-8'),validSearch['FLUX_V'][i_min]))
+                  validSearch['MAIN_ID'][i_min],validSearch['FLUX_V'][i_min]))
         else:
-            print('{0:d} stars identified within {1:.0f} arcsec. Querying the target name'.format(nb_stars,search_radius.value)) 
+            print('{0:d} stars identified within {1:.0f} or {2:2f} arcsec. Querying the target name'.format(nb_stars,search_radius.value,search_radius_alt.value)) 
             # First we query the target name
             simbad_dico = get_dico_star_properties_from_simbad_target_name_search(name,customSimbad)
             if ('simbad_MAIN_ID' in simbad_dico):
@@ -268,7 +287,7 @@ def query_simbad(date,coords,name=None,debug=True):
                 i_min = np.argmin(sep_list)
                 min_sep = np.min(sep_list)
                 print('The closest star is: {0:s} with V={1:.1f} at {2:.2f} arcsec'.format(\
-                  validSearch['MAIN_ID'][i_min].decode('UTF-8'),validSearch['FLUX_V'][i_min],min_sep))
+                  validSearch['MAIN_ID'][i_min],validSearch['FLUX_V'][i_min],min_sep))
         simbad_dico = populate_simbad_dico(validSearch,i_min)
     simbad_dico['DEC'] = coords.dec.to_string(unit=u.degree,sep=' ')
     simbad_dico['RA'] = coords.ra.to_string(unit=u.hourangle,sep=' ')
@@ -318,8 +337,8 @@ def populate_simbad_dico(simbad_search_list,i):
     for key in simbad_search_list.keys():
         if key in ['MAIN_ID','SP_TYPE','ID_HD','OTYPE','OTYPE_V','OTYPE_3']: #strings
             if not simbad_search_list[key].mask[i]:
-                simbad_dico['simbad_'+key] = simbad_search_list[key][i].decode('UTF-8')
-        elif key in ['FLUX_V', 'FLUX_R', 'FLUX_I', 'FLUX_J', 'FLUX_H', 'FLUX_K','PMDEC','PMRA']: #floats
+                simbad_dico['simbad_'+key] = simbad_search_list[key][i]
+        elif key in ['FLUX_V', 'FLUX_R', 'FLUX_G','FLUX_I', 'FLUX_J', 'FLUX_H', 'FLUX_K','PMDEC','PMRA']: #floats
             if not simbad_search_list[key].mask[i]:
                 simbad_dico['simbad_'+key] = float(simbad_search_list[key][i])
         elif key.startswith('RA_2_A_FK5_'): 
@@ -425,4 +444,18 @@ if __name__ == "__main__":
     path_ecmwf = '/Users/jmilli/Documents/atmospheric_parameters/ECMW_forecast' 
     start_date = '2018-10-27T00:00:00'
     end_date = '2018-10-28T00:00:00'
-    pd_ecmwf = query_ecmwf_jetstream(path_ecmwf,start_date,end_date)
+    # pd_ecmwf = query_ecmwf_jetstream(path_ecmwf,start_date,end_date)
+
+
+    date_test = Time('2020-07-14T00:04:20.200')
+    # test_coordinates = coord.SkyCoord.from_name('Lacaille 8760')
+    test_coordinates = coord.SkyCoord.from_name('HIP 87937')
+    # test_coordinates = coord.SkyCoord('17h57m48.4997s +04d44m36.111s', frame=ICRS)
+    simbad_dico = query_simbad(date_test,test_coordinates,name=None,debug=True)
+    print(simbad_dico)
+
+
+    # radius = u.Quantity(12.0, u.arcsec)
+    # j = Gaia.cone_search_async(test_coordinates, radius)
+    # r = j.get_results()
+    # r.pprint()

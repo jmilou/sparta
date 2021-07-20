@@ -178,7 +178,7 @@ def query_meteo(path,start_date='2017-04-28T00:00:00.00',\
     df = pd.read_csv(os.path.join(path,filename),skiprows=1,skipfooter=5,engine='python')
     return df
 
-def query_simbad(date,coords,name=None,debug=True):
+def query_simbad(date,coords,name=None,debug=True,limit_G_mag=15):
     """
     Function that tries to query Simbad to find the object. 
     It first tries to see if the star name (optional argument) is resolved 
@@ -216,7 +216,7 @@ def query_simbad(date,coords,name=None,debug=True):
             print('No star identified for the RA/DEC pointing. Stopping the search.')
             return None
         else:
-            validSearch = search[search['FLUX_G']<15.]
+            validSearch = search[search['FLUX_G']<limit_G_mag]
             nb_stars = len(validSearch)                
         
     elif search is None and name is not None:
@@ -234,12 +234,12 @@ def query_simbad(date,coords,name=None,debug=True):
                 print('No star identified for the RA/DEC pointing. Stopping the search.')
                 return None
             else:
-                validSearch = search[search['FLUX_G']<15.]
+                validSearch = search[search['FLUX_G']<limit_G_mag]
                 nb_stars = len(validSearch)                
     else:
         # If the cone search returned some results, we count the valid candidates.
         nb_stars = len(search)
-        validSearch = search[search['FLUX_G']<15.]
+        validSearch = search[search['FLUX_G']<limit_G_mag]
         nb_stars = len(validSearch)    
         
     if nb_stars==0:
@@ -261,8 +261,8 @@ def query_simbad(date,coords,name=None,debug=True):
     elif nb_stars>0:
         if nb_stars ==1:
             i_min=0
-            print('One star found: {0:s} with V={1:.1f}'.format(\
-                  validSearch['MAIN_ID'][i_min],validSearch['FLUX_V'][i_min]))
+            print('One star found: {0:s} with G={1:.1f}'.format(\
+                  validSearch['MAIN_ID'][i_min],validSearch['FLUX_G'][i_min]))
         else:
             print('{0:d} stars identified within {1:.0f} or {2:2f} arcsec. Querying the target name'.format(nb_stars,search_radius.value,search_radius_alt.value)) 
             # First we query the target name
@@ -286,8 +286,8 @@ def query_simbad(date,coords,name=None,debug=True):
                     sep_list.append(coords.separation(coords_i).to(u.arcsec).value)
                 i_min = np.argmin(sep_list)
                 min_sep = np.min(sep_list)
-                print('The closest star is: {0:s} with V={1:.1f} at {2:.2f} arcsec'.format(\
-                  validSearch['MAIN_ID'][i_min],validSearch['FLUX_V'][i_min],min_sep))
+                print('The closest star is: {0:s} with G={1:.1f} at {2:.2f} arcsec'.format(\
+                  validSearch['MAIN_ID'][i_min],validSearch['FLUX_G'][i_min],min_sep))
         simbad_dico = populate_simbad_dico(validSearch,i_min)
     simbad_dico['DEC'] = coords.dec.to_string(unit=u.degree,sep=' ')
     simbad_dico['RA'] = coords.ra.to_string(unit=u.hourangle,sep=' ')
@@ -403,7 +403,11 @@ def extract_spectral_type_code(sp_type_str):
     if sp_type_str[2:3] == '.':
         spectral_type_number = float(sp_type_str[1:4])
     else:
-        spectral_type_number = float(sp_type_str[1:2])
+        try:
+            spectral_type_number = float(sp_type_str[1:2])
+        except:
+            spectral_type_number = 0
+            print('The spectral type {0:s} could not not be accurately determined.'.format(sp_type_str))
     return offset_code+spectral_type_number
     
 

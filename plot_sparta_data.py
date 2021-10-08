@@ -326,9 +326,9 @@ def plot_sparta_data(path_raw='.',path_output=None,plot=True,debug=True):
     pd_simbad.to_csv(os.path.join(path_output,'simbad_{0:s}.csv'.format(str(current_night))),index=False)
         
     # We convert the visWFS flux in photons per subaperture. visWFS is the flux on the whole pupil made of 1240 subapertures. 
-    nb_subapertures = 1240
-    photon2ADU = 17 # from Jeff email
-    flux_VisLoop = np.asarray(flux_VisLoop)/gain/photon2ADU # in photons per subaperture
+    nb_subapertures = 1240 # not used (we assumed flux_VisLoop is already given per subaperture )
+    ADU2photon = 270000/np.power(2,14) # 17 # ph/ADU (from Jeff email) = 270000/2^14
+    flux_VisLoop = np.asarray(flux_VisLoop)/gain*ADU2photon # in photons per subaperture per frame
 
     #We interpolate the visWFS flux at the time where the strehl is known
     flux_VisLoop_function = interp1d(time_VisLoop.mjd,flux_VisLoop,kind='linear',bounds_error=False,fill_value=flux_VisLoop[0])

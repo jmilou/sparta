@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 
 """
-This script creates a summary of the atmospheric conditions and AO performances 
-for a given night by analyzing the SPARTA data and downloading the corresponding 
-ASM data. 
+This script creates a summary of the atmospheric conditions and AO performances
+for a given night by analyzing the SPARTA data and downloading the corresponding
+ASM data.
 Author: J. Milli
 Creation date: 2017-01-10
 """
@@ -15,7 +15,7 @@ import matplotlib.pyplot as plt
 import glob
 from astropy.time import Time
 from datetime import timedelta #datetime
-import matplotlib.gridspec as gridspec 
+import matplotlib.gridspec as gridspec
 import matplotlib as mpl
 from scipy.interpolate import interp1d
 import subprocess
@@ -34,18 +34,18 @@ from query_eso_archive import query_simbad
 from ecmwf_utilities import request_ecmwf
 #from astropy.utils.iers import conf
 #conf.auto_max_age = None
-  
+
 # Definition of the UT3 coordinates
 latitude =  -24.6268*u.degree
-longitude = -70.4045*u.degree  
-altitude = 2648.0*u.meter 
+longitude = -70.4045*u.degree
+altitude = 2648.0*u.meter
 location = coordinates.EarthLocation(lon=longitude,lat=latitude,height=altitude)
 
 def plot_sparta_data(path_raw='.',path_output=None,plot=True,debug=True):
     """
-    Function that reads the Sparta files and extract atmospheric and AO data 
+    Function that reads the Sparta files and extract atmospheric and AO data
     Input:
-    - path_raw: the path where the SPARTA files are stored. They must have 
+    - path_raw: the path where the SPARTA files are stored. They must have
         a DPR.TYPE=OBJECT,AO and be named SPHER*.fits
     - path_output: the path were the plots, fits and .txt output files will
         be stored. By default it is the same as path_raw
@@ -71,12 +71,12 @@ def plot_sparta_data(path_raw='.',path_output=None,plot=True,debug=True):
     r0=[]# list of r0
     windSpeed=[] # list of wind speed
     strehl=[] # list of strehl
-    file_atmos = [] # list of fits files names 
-    sec_VisLoop=[] # list of strings in unix format for time of 
+    file_atmos = [] # list of fits files names
+    sec_VisLoop=[] # list of strings in unix format for time of
     flux_VisLoop=[] # list of fluxes for the visible WFS
-    sec_IRLoop=[] # list of strings in unix format for time of 
+    sec_IRLoop=[] # list of strings in unix format for time of
     flux_IRLoop=[] # list of fluxes for the IR DTTS images
-    sec_img_DTTS=[] # list of strings in unix format for time of 
+    sec_img_DTTS=[] # list of strings in unix format for time of
     cube_DTTS = [] # list of cubes of images of the DTTS
     name=[] # list of OB names (length=the number of sparta files)
     date_start_str=[] # list of the starting time of each OB
@@ -94,7 +94,7 @@ def plot_sparta_data(path_raw='.',path_output=None,plot=True,debug=True):
                     len(hdu_list)<2:
                 if debug:
                     print('Bad file {0:1}'.format(files[i][files[i].index('SPHER'):]))
-                continue 
+                continue
         except: #if these keywords are not in the header we skip this file
             continue
         name = np.append(name,header['HIERARCH ESO OBS NAME']) # OB name
@@ -109,7 +109,7 @@ def plot_sparta_data(path_raw='.',path_output=None,plot=True,debug=True):
         coords = np.append(coords,coords_J2000)
         if debug:
             print('Reading {0:1}'.format(files[i][files[i].index('SPHER'):]))
-            print('   AO mode: {0:s}'.format(wfs_mode))            
+            print('   AO mode: {0:s}'.format(wfs_mode))
         AtmPerfParams = hdu_list[1].data # We read the atmospheric data
         if len(AtmPerfParams["Sec"]) > 0:
             sec_atmos = np.append(sec_atmos, AtmPerfParams["Sec"]) # AtmPerfParams["Sec"] is a list hence this syntax
@@ -164,26 +164,26 @@ def plot_sparta_data(path_raw='.',path_output=None,plot=True,debug=True):
     time_VisLoop=Time(sec_VisLoop,format='unix')
     time_VisLoop.format='isot'
     time_IRLoop=Time(sec_IRLoop,format='unix')
-    time_IRLoop.format='isot' 
+    time_IRLoop.format='isot'
     time_DTTS = Time(sec_img_DTTS,format='unix')
-    time_DTTS.format='isot' 
-    
+    time_DTTS.format='isot'
+
     # We reformat the DTTS cube
     cube_DTTS = np.resize(cube_DTTS,(len(cube_DTTS)//(32*32),32,32))
 
     # We double check that the atmospheric values are valid
-    bad_strehl = np.logical_or(strehl>0.98,strehl<0.05)
-    if np.any(bad_strehl):         
+    bad_strehl = np.logical_or(np.asarray(strehl)>0.98, np.asarray(strehl)<0.05)
+    if np.any(bad_strehl):
         if debug:
             print('   {0:d} bad strehl measurements were detected:'.format(np.sum(bad_strehl)),strehl[bad_strehl])
-        strehl[bad_strehl]=np.nan            
-    bad_r0 = np.logical_or(r0>0.9,r0<=0.)
-    if np.any(bad_r0):         
+        strehl[bad_strehl]=np.nan
+    bad_r0 = np.logical_or(np.asarray(r0)>0.9, np.asarray(r0)<=0.)
+    if np.any(bad_r0):
         if debug:
             print('   {0:d} bad r0 measurements were detected:'.format(np.sum(bad_r0)),r0[bad_r0])
-        r0[bad_r0]=np.nan            
-    bad_windSpeed = np.logical_or(windSpeed>50,windSpeed<=0)
-    if np.any(bad_windSpeed):         
+        r0[bad_r0]=np.nan
+    bad_windSpeed = np.logical_or(np.asarray(windSpeed)>50, np.asarray(windSpeed)<=0)
+    if np.any(bad_windSpeed):
         if debug:
             print('   {0:d} bad equivalent wind velocity measurements were detected:'.format(np.sum(bad_windSpeed)),windSpeed[bad_windSpeed])
             windSpeed[bad_windSpeed]=np.nan
@@ -192,8 +192,8 @@ def plot_sparta_data(path_raw='.',path_output=None,plot=True,debug=True):
     print('We read in total {0:d} VisLoop parameters'.format(len(time_VisLoop)))
     print('We read in total {0:d} IRLoop parameters'.format(len(time_IRLoop)))
     # We compute tau0 and the seeing from r0
-    tau0 = 0.314*r0/windSpeed
-    seeing = np.rad2deg(lam/r0)*3600
+    tau0 = (0.314*np.asarray(r0)/np.asarray(windSpeed))
+    seeing = (np.rad2deg(lam/np.asarray(r0))*3600)
 
 
     # we store in time_max the time of the last data, and make sure at least one of the
@@ -208,7 +208,7 @@ def plot_sparta_data(path_raw='.',path_output=None,plot=True,debug=True):
                 time_max = np.max(time_atmos)
             except ValueError:
                 print('There are no relevent data in the sparta files')
-                return              
+                return
 
     # We create new arrays with unique OB names and dates
     new_date_start_str = []
@@ -216,7 +216,7 @@ def plot_sparta_data(path_raw='.',path_output=None,plot=True,debug=True):
     new_name = []
     simbad_dico = {'DEC':[],'RA':[],'simbad_DEC_ICRS':[],'simbad_DEC_current':[],\
                    'simbad_FLUX_H':[],'simbad_FLUX_J':[],'simbad_FLUX_K':[],\
-                    'simbad_FLUX_V':[],'simbad_FLUX_R':[],'simbad_FLUX_I':[],\
+                    'simbad_FLUX_V':[],'simbad_FLUX_R':[],'simbad_FLUX_G':[],'simbad_FLUX_I':[],\
                     'simbad_ID_HD':[],'simbad_MAIN_ID':[],\
                     'simbad_OTYPE':[],'simbad_OTYPE_3':[],'simbad_OTYPE_V':[],\
                     'simbad_PMDEC':[],'simbad_PMRA':[],'simbad_RA_ICRS':[],\
@@ -224,25 +224,24 @@ def plot_sparta_data(path_raw='.',path_output=None,plot=True,debug=True):
                     'simbad_separation_RADEC_ICRSJ2000':[],'simbad_separation_RADEC_current':[]}
     for i,namei in enumerate(name):
         if i==0: #the first OB
-            new_name.append(namei)
-            new_date_start_str.append(date_start_str[i])
             simbad_dico_tmp = query_simbad(Time(date_start_str[i]),coords[i],name=name[i])
-            for simbad_key in simbad_dico.keys():
-                if simbad_key in simbad_dico_tmp.keys():
-                    simbad_dico[simbad_key].append(simbad_dico_tmp[simbad_key])
-                else:
-                    simbad_dico[simbad_key].append(np.nan)                
-            continue
+            if simbad_dico_tmp is not None:
+                new_name.append(namei)
+                new_date_start_str.append(date_start_str[i])
+                for simbad_key in simbad_dico.keys():
+                    if simbad_key in simbad_dico_tmp.keys():
+                        simbad_dico[simbad_key].append(simbad_dico_tmp[simbad_key])
+                    else:
+                        simbad_dico[simbad_key].append(np.nan)
+                continue
         if namei != name[i-1]: # in case this is the same OB repeated
-            new_name.append(namei)
-            new_date_start_str.append(date_start_str[i])
             txtfilename = files[i].replace('.fits','.NL.txt')
             if os.path.isfile(txtfilename):
                 try:
                     with open(txtfilename, "r") as myfile:
                         lines = myfile.readlines()
                     for line in lines:
-                        if line.startswith('Target:'):            
+                        if line.startswith('Target:'):
                             OB_targetname = line[line.index('Target:')+7:].strip()
                             print('Target name: {0:s}'.format(OB_targetname))
                 except Exception as e:
@@ -251,15 +250,18 @@ def plot_sparta_data(path_raw='.',path_output=None,plot=True,debug=True):
             else:
                 OB_targetname = name[i]
             simbad_dico_tmp = query_simbad(Time(date_start_str[i]),coords[i],name=OB_targetname)
-            for simbad_key in simbad_dico.keys():
-                if simbad_key in simbad_dico_tmp.keys():
-                    simbad_dico[simbad_key].append(simbad_dico_tmp[simbad_key])
-                else:
-                    simbad_dico[simbad_key].append(np.nan)                
+            if simbad_dico_tmp is not None:
+                new_name.append(namei)
+                new_date_start_str.append(date_start_str[i])
+                for simbad_key in simbad_dico.keys():
+                    if simbad_key in simbad_dico_tmp.keys():
+                        simbad_dico[simbad_key].append(simbad_dico_tmp[simbad_key])
+                    else:
+                        simbad_dico[simbad_key].append(np.nan)
 
     for i,namei in enumerate(name[0:-1]):
             if namei != name[i+1]:
-                new_date_end_str.append(date_start_str[i+1])                
+                new_date_end_str.append(date_start_str[i+1])
     new_date_end_str.append(time_max.iso)
 
     # We print the info for each target.
@@ -298,47 +300,52 @@ def plot_sparta_data(path_raw='.',path_output=None,plot=True,debug=True):
             median_tau0_list.append(median_tau0)
             median_windSpeed_list.append(median_windSpeed)
             median_r0_list.append(median_r0)
-            median_flux_VisLoop_list.append(median_flux_VisLoop)            
+            median_flux_VisLoop_list.append(median_flux_VisLoop)
         except:
             print('{0:s} from {1:s} to {2:s} ---%   --"   ---ms ----m/s  ---cm   ---ADU ----'.format(new_name[i].ljust(35),\
                    start_tmp.value[11:],end_tmp.value[11:]))
 
-    time_file = Time(new_date_start_str) 
+    time_file = Time(new_date_start_str)
     nb_obs = len(new_name)
 
     # we store here the starting date and the ending date
     time_min = time_file[0]
-    current_datetime = time_max.datetime 
+    current_datetime = time_max.datetime
     if current_datetime.hour > 12:
         current_night = current_datetime.date()
     else:
         current_night_datetime = current_datetime - timedelta(days=1)
         current_night = current_night_datetime.date()
-    ascii.write([new_name,[str(st) for st in start_ob_list],[str(st) for st in end_ob_list],\
-                           median_strehl_list,median_seeing_list,\
-                     median_tau0_list,median_windSpeed_list,median_r0_list,\
-                     median_flux_VisLoop_list,list(simbad_dico['simbad_FLUX_V'])],\
-                    os.path.join(path_output,'summary_{0:s}.csv'.format(str(current_night))),\
-                    names=['OB_name','start_UT','end_UT','strehl_sparta','seeing_los_sparta','tau0_los_sparta',\
-                           'windSpeed_los_sparta','r0_los_sparta','sparta_flux_VisLoop','V_mag'],format='csv')#,overwrite=True
+
+    data = [new_name,[str(st) for st in start_ob_list], [str(st) for st in end_ob_list],
+                      median_strehl_list, median_seeing_list,
+                      median_tau0_list, median_windSpeed_list, median_r0_list,
+                      median_flux_VisLoop_list, list(simbad_dico['simbad_FLUX_V'])]
+    names = ['OB_name','start_UT','end_UT','strehl_sparta','seeing_los_sparta','tau0_los_sparta',
+             'windSpeed_los_sparta','r0_los_sparta','sparta_flux_VisLoop','V_mag']
+    file_name = os.path.join(path_output,'summary_{0:s}.csv'.format(str(current_night)))
+    ascii.write(data, file_name, names=names,format='csv')#,overwrite=True
 
     pd_simbad = pd.DataFrame(simbad_dico)
     pd_simbad.to_csv(os.path.join(path_output,'simbad_{0:s}.csv'.format(str(current_night))),index=False)
-        
-    # We convert the visWFS flux in photons per subaperture. visWFS is the flux on the whole pupil made of 1240 subapertures. 
+
+    # We convert the visWFS flux in photons per subaperture. visWFS is the flux on the whole pupil made of 1240 subapertures.
     nb_subapertures = 1240
-    photon2ADU = 17 # from Jeff email
-    flux_VisLoop = np.asarray(flux_VisLoop)/gain/photon2ADU # in photons per subaperture
+    ADU2ph = 270000/2**14#ph/ADU#17 # from Jeff email
+    flux_VisLoop = ADU2ph * np.asarray(flux_VisLoop)/gain/nb_subapertures  # in photons per subaperture per frame
 
     #We interpolate the visWFS flux at the time where the strehl is known
-    flux_VisLoop_function = interp1d(time_VisLoop.mjd,flux_VisLoop,kind='linear',bounds_error=False,fill_value=flux_VisLoop[0])
-    flux_VisLoop_interpolated = flux_VisLoop_function(time_atmos.mjd) 
+    if len(flux_VisLoop) > 1:
+        flux_VisLoop_function = interp1d(time_VisLoop.mjd,flux_VisLoop,kind='linear',bounds_error=False,fill_value=flux_VisLoop[0])
+        flux_VisLoop_interpolated = flux_VisLoop_function(time_atmos.mjd)
+    else:
+        flux_VisLoop_interpolated = flux_VisLoop
 
     atmos_param_df = pd.DataFrame({'date':time_atmos,'tau0_los_sparta':tau0,\
                                    'seeing_los_sparta':seeing,\
                                    'wind_speed_los_sparta':windSpeed,\
                                    'r0_los_sparta':r0,'strehl_sparta':strehl,\
-                                   'interpolated_flux_VisLoop[#photons/aperture]':flux_VisLoop_interpolated,\
+                                   'interpolated_flux_VisLoop[#photons/aperture/frame]':flux_VisLoop_interpolated,\
                                    'airmass_sparta':airmass,'altitude_sparta':altitude,\
                                    'sparta_file':file_atmos})
     # we compute the zenith seeing: seeing(zenith) = seeing(AM) AM^(3/5)
@@ -349,21 +356,23 @@ def plot_sparta_data(path_raw='.',path_output=None,plot=True,debug=True):
 
     IRLoop_df = pd.DataFrame({'date':time_IRLoop,'flux_IRLoop_ADU':flux_IRLoop})
     IRLoop_df.to_csv(os.path.join(path_output,'sparta_IR_DTTS_{0:s}.csv'.format(str(current_night))),index=False)
-    VisLoop_df = pd.DataFrame({'date':time_VisLoop,'flux_VisLoop[#photons/aperture]':flux_VisLoop})
+    VisLoop_df = pd.DataFrame({'date':time_VisLoop,
+                               'flux_VisLoop[#photons/aperture/frame]':flux_VisLoop,
+                               'Frame rate [Hz]':freq})
     VisLoop_df.to_csv(os.path.join(path_output,'sparta_visible_WFS_{0:s}.csv'.format(str(current_night))),index=False)
 
     # We convert the DTTS time stamps in an dataframe (later we could add more informations
     #directly retrievde from the image...)
     DTTS_df = pd.DataFrame({'date':time_DTTS})
-    DTTS_df.to_csv(os.path.join(path_output,'DTTS_cube_{0:s}.csv'.format(str(current_night))))    
-    
+    DTTS_df.to_csv(os.path.join(path_output,'DTTS_cube_{0:s}.csv'.format(str(current_night))))
+
     primary_hdu = fits.PrimaryHDU(cube_DTTS)
     col1 = fits.Column(name='Sec', format='D',array=sec_img_DTTS)
     cols = fits.ColDefs([col1])
     tbhdu = fits.BinTableHDU.from_columns(cols)
     thdulist = fits.HDUList([primary_hdu, tbhdu])
     thdulist.writeto(os.path.join(path_output,'DTTS_cube_{0:s}.fits'.format(str(current_night))),clobber=True)
-   
+
     if debug:
         print('Writing atmospheric_params_{0:s}.csv ...'.format(str(current_night)))
         print('Writing visible_WFS_{0:s}.csv ...'.format(str(current_night)))
@@ -401,13 +410,13 @@ def plot_sparta_data(path_raw='.',path_output=None,plot=True,debug=True):
                         'MASS-DIMM Tau0 [s]':'MASS-DIMM_tau0',\
                         'MASS-DIMM Turb Velocity [m/s]':'MASS-DIMM_turb_speed',\
                         'MASS-DIMM Seeing ["]':'MASS-DIMM_seeing',\
-                        'Free Atmosphere Seeing ["]':'MASS_freeatmos_seeing'}, inplace=True)        
+                        'Free Atmosphere Seeing ["]':'MASS_freeatmos_seeing'}, inplace=True)
         time_mass_dimm_asm = Time(list(mass_df['date']),format='isot',scale='utc')
         mass_df.to_csv(os.path.join(path_output,'mass_dimm_{0:s}.csv'.format(str(current_night))),index=False)
     except Exception as e:
         time_mass_dimm_asm=None
         if debug:
-            print(e)        
+            print(e)
             print("The plot won't contain any MASS-DIMM data.")
 
     # Now we query the ASM database to get the seeing from the DIMM
@@ -421,7 +430,7 @@ def plot_sparta_data(path_raw='.',path_output=None,plot=True,debug=True):
     if error != None:
         print('Error during the request of the ASM DIMM database:')
         print(error)
-    
+
     # Now we read the DIMM file
     print('Querying dimm data')
     try:
@@ -486,7 +495,7 @@ def plot_sparta_data(path_raw='.',path_output=None,plot=True,debug=True):
     if error != None:
         print('Error during the request of the ASM SLODAR database:')
         print(error)
-    
+
     # Now we read the SLODAR file
     try:
         slodar_df = pd.read_csv(os.path.join(path_output,'slodar_{0:s}.csv'.format(str(current_night))),skiprows=1,skipfooter=5,engine='python')
@@ -502,7 +511,7 @@ def plot_sparta_data(path_raw='.',path_output=None,plot=True,debug=True):
                           'Surface layer profile [10**(-15)m**(1/3)]':'slodar_surface_layer',\
                           'Seeing ["]':'slodar_seeing'}, inplace=True)
         wave_nb=2*np.pi/lam
-        time_slodar_asm = Time(list(slodar_df['date']),format='isot',scale='utc')   
+        time_slodar_asm = Time(list(slodar_df['date']),format='isot',scale='utc')
         slodar_df['slodar_r0_above_UT'] = np.power(0.423*(wave_nb**2)*slodar_df['Cn2_above_UT']*1.e-15,-3./5.)
         slodar_df['slodar_seeing_above_UT']= np.rad2deg(lam/slodar_df['slodar_r0_above_UT'])*3600.
         slodar_df['slodar_Cn2_total'] = np.power(slodar_df['slodar_seeing']/2.e7,1./0.6) # in m^1/3
@@ -516,10 +525,10 @@ def plot_sparta_data(path_raw='.',path_output=None,plot=True,debug=True):
          if debug:
             print(e)
             print('There was probably only one SLODAR data point.')
-            print("The plot won't contain any SLODAR data.")       
+            print("The plot won't contain any SLODAR data.")
     except Exception as e:
         if debug:
-            print(e)        
+            print(e)
             print("The plot won't contain any SLODAR data.")
 
     # Now we query the telescope seeing
@@ -546,11 +555,11 @@ def plot_sparta_data(path_raw='.',path_output=None,plot=True,debug=True):
         sphere_keys_to_drop= ['Release Date','Object','RA','DEC','Target Ra Dec','Target l b','OBS Target Name']
         for sphere_key_to_drop in sphere_keys_to_drop:
             sphere_df.drop(sphere_key_to_drop, axis=1, inplace=True)
-        time_sphere = Time(list(sphere_df['date']),format='iso',scale='utc')        
+        time_sphere = Time(list(sphere_df['date']),format='iso',scale='utc')
         sphere_df.to_csv(os.path.join(path_output,'sphere_ambi_{0:s}.csv'.format(str(current_night))),index=False)
     except Exception as e:
         if debug:
-            print(e)        
+            print(e)
             print("The plot won't contain any data from the SPHERE science files headers.")
 
     # Now we query the meteo tower to get the wind speed, direction and temperature
@@ -579,7 +588,7 @@ def plot_sparta_data(path_raw='.',path_output=None,plot=True,debug=True):
         asm_df.to_csv(os.path.join(path_output,'asm_{0:s}.csv'.format(str(current_night))),index=False)
     except Exception as e:
         if debug:
-            print(e)        
+            print(e)
             print("The plot won't contain any data from the ASM")
 
     # Now we query the lathpro
@@ -606,7 +615,7 @@ def plot_sparta_data(path_raw='.',path_output=None,plot=True,debug=True):
         lathpro_df.to_csv(os.path.join(path_output,'lathpro_{0:s}.csv'.format(str(current_night))),index=False)
     except Exception as e:
         if debug:
-            print(e)        
+            print(e)
             print("The plot won't contain any data from the Lathpro")
 
     # Now we query the ECMWF data
@@ -614,17 +623,17 @@ def plot_sparta_data(path_raw='.',path_output=None,plot=True,debug=True):
     pd_ecmwf = request_ecmwf(time_min,time_max)
     if pd_ecmwf is not None:
         pd_ecmwf.to_csv(os.path.join(path_output,'ecmwf_{0:s}.csv'.format(str(current_night))),index=False)
-        time_ecmwf = Time(list(pd_ecmwf['date']))#,format='isot',scale='utc')        
+        time_ecmwf = Time(list(pd_ecmwf['date']))#,format='isot',scale='utc')
 
     if plot:
         majorFormatter = mpl.dates.DateFormatter('%H:%M')
         plt.close(1)
         fig = plt.figure(1, figsize=(12,15))
         plt.rcParams.update({'font.size':14})
-        
+
         gs = gridspec.GridSpec(4,2, height_ratios=[1,1,1,1],)
         gs.update(left=0.1, right=0.95, bottom=0.1, top=0.98, wspace=0.2, hspace=0.3)
-        
+
         ax1 = plt.subplot(gs[0,0]) # Area for the seeing
         ax2 = plt.subplot(gs[0,1]) # Area for the r0
         ax3 = plt.subplot(gs[1,0]) # Area for the Flux
@@ -632,13 +641,13 @@ def plot_sparta_data(path_raw='.',path_output=None,plot=True,debug=True):
         ax5 = plt.subplot(gs[2:4,0]) # Area for the combined plot
         ax6 = plt.subplot(gs[2,1]) # Area for the GL frac
         ax7 = plt.subplot(gs[3,1]) # Area for the wind speed
-        
+
         # Plot the seeing in the graph 1
         try:
-            ax1.plot_date(time_atmos.plot_date,atmos_param_df['seeing_zenith_sparta'],'.', color='darkorange',markeredgecolor='none',label='sparta')    
+            ax1.plot_date(time_atmos.plot_date,atmos_param_df['seeing_zenith_sparta'],'.', color='darkorange',markeredgecolor='none',label='sparta')
         except Exception as e:
             if debug:
-                print('No Sparta seeing available for the plot 1: {0:s}'.format(str(e)))            
+                print('No Sparta seeing available for the plot 1: {0:s}'.format(str(e)))
         try:
             ax1.plot_date(time_mass_dimm_asm.plot_date,mass_df['MASS-DIMM_seeing'],'.', color='palevioletred',\
                           markeredgecolor='none',label='MASS-DIMM')
@@ -651,20 +660,20 @@ def plot_sparta_data(path_raw='.',path_output=None,plot=True,debug=True):
             if debug:
                 print('No MASS free atmosphere seeing available for the plot 1: {0:s}'.format(str(e)))
         try:
-            ax1.plot_date(time_dimm_asm.plot_date,dimm_df['dimm_seeing'],'.', color='dimgrey',markeredgecolor='none',label='DIMM')   
+            ax1.plot_date(time_dimm_asm.plot_date,dimm_df['dimm_seeing'],'.', color='dimgrey',markeredgecolor='none',label='DIMM')
         except Exception as e:
             if debug:
                 print('No DIMM data available for the plot 1: {0:s}'.format(str(e)))
         try:
-            ax1.plot_date(time_old_dimm_asm.plot_date,old_dimm_df['old_dimm_seeing'],'.', color='dimgrey',markeredgecolor='none',label='old DIMM')   
+            ax1.plot_date(time_old_dimm_asm.plot_date,old_dimm_df['old_dimm_seeing'],'.', color='dimgrey',markeredgecolor='none',label='old DIMM')
         except Exception as e:
             if debug:
                 print('No old DIMM data available for the plot 1: {0:s}'.format(str(e)))
         try:
             # I commented the SLODAR alone since only the slodar above UT matters
-            #ax1.plot_date(time_slodar_asm.plot_date,asm_slodar_file['seeing'],'.', color='darkkhaki',markeredgecolor='none',label='SLODAR')   
+            #ax1.plot_date(time_slodar_asm.plot_date,asm_slodar_file['seeing'],'.', color='darkkhaki',markeredgecolor='none',label='SLODAR')
             ax1.plot_date(time_slodar_asm.plot_date,slodar_df['slodar_seeing_above_UT'],'.', color='magenta',\
-                          markeredgecolor='none',label='SLODAR above UT')   
+                          markeredgecolor='none',label='SLODAR above UT')
         except Exception as e:
             if debug:
                 print('No SLODAR data available for the plot 1: {0:s}'.format(str(e)))
@@ -677,55 +686,55 @@ def plot_sparta_data(path_raw='.',path_output=None,plot=True,debug=True):
         ax1.set_ylabel('Seeing (arcsec)')
         for tick in ax1.get_xticklabels():
             tick.set_rotation(45)
-        # add filling for even OBs 
+        # add filling for even OBs
         min_y,max_y = ax1.get_ybound()
         for i in range(0,nb_obs-2,2):
             ax1.fill_between(time_file[i:i+2].plot_date,0,max_y, facecolor='blue', alpha=0.1)
         if np.mod(nb_obs,2)==0: #then you add the last one which is defined
             ax1.fill_between(time_file[nb_obs-2:nb_obs].plot_date,0,max_y, facecolor='blue', alpha=0.1)
         else:
-            ax1.fill_between([time_file[-1].plot_date,time_atmos[-1].plot_date],0,100, facecolor='blue', alpha=0.2)            
+            ax1.fill_between([time_file[-1].plot_date,time_atmos[-1].plot_date],0,100, facecolor='blue', alpha=0.2)
         ax1.set_ylim(min_y,max_y)
         ax1.set_xlim(time_min.plot_date,time_max.plot_date)
         ax1.grid()
         ax1.legend(frameon=False,loc='best',fontsize=10)
         ax1.xaxis.set_major_formatter(majorFormatter)
-        
+
         # Plot the tau0 in the graph 2.
         try:
             ax2.plot_date(time_atmos.plot_date,atmos_param_df['tau0_zenith_sparta']*1000,'.', color='darkgreen',markeredgecolor='none',label='sparta')
         except Exception as e:
             if debug:
-                print('No Sparta data available for the plot 2: {0:s}'.format(str(e)))            
+                print('No Sparta data available for the plot 2: {0:s}'.format(str(e)))
         try:
             ax2.plot_date(time_mass_dimm_asm.plot_date,mass_df['MASS-DIMM_tau0']*1000.,'.',color='palevioletred',label='MASS-DIMM',markeredgecolor='none')
             ax2.plot_date(time_mass_dimm_asm.plot_date,mass_df['MASS_tau0']*1000.,'.',color='dimgrey',label='MASS',markeredgecolor='none')
         except Exception as e:
             if debug:
-                print('No MASS-DIMM data available for the plot 2: {0:s}'.format(str(e)))            
+                print('No MASS-DIMM data available for the plot 2: {0:s}'.format(str(e)))
         try:
             ax2.plot_date(time_old_dimm_asm.plot_date,old_dimm_df['old_dimm_tau0']*1000.,'.',color='palevioletred',label='old DIMM',markeredgecolor='none')
         except Exception as e:
             if debug:
-                print('No old DIMM data available for the plot 2: {0:s}'.format(str(e)))            
+                print('No old DIMM data available for the plot 2: {0:s}'.format(str(e)))
 
         ax2.set_ylabel('$\\tau_0$ (ms)')
         for tick in ax2.get_xticklabels():
             tick.set_rotation(45)
-        # add filling for even OBs 
+        # add filling for even OBs
         min_y,max_y = ax2.get_ybound()
         for i in range(0,nb_obs-2,2):
             ax2.fill_between(time_file[i:i+2].plot_date,min_y,max_y, facecolor='blue', alpha=0.1)
         if np.mod(nb_obs,2)==0: #then you add the last one which is defined
             ax2.fill_between(time_file[nb_obs-2:nb_obs].plot_date,min_y,max_y, facecolor='blue', alpha=0.1)
         else:
-            ax2.fill_between([time_file[-1].plot_date,time_atmos[-1].plot_date],min_y,max_y, facecolor='blue', alpha=0.1)            
+            ax2.fill_between([time_file[-1].plot_date,time_atmos[-1].plot_date],min_y,max_y, facecolor='blue', alpha=0.1)
         ax2.set_xlim(time_min.plot_date,time_max.plot_date)
         ax2.set_ylim(min_y,max_y)
         ax2.grid()
         ax2.legend(frameon=False,loc='best',fontsize=10)
         ax2.xaxis.set_major_formatter(majorFormatter)
-    
+
         # plot the DDT flux in the graph 3
         ax3.plot_date(time_IRLoop.plot_date,flux_IRLoop,\
             '.', color='red',markeredgecolor='none',label='IR DTTS')
@@ -739,33 +748,33 @@ def plot_sparta_data(path_raw='.',path_output=None,plot=True,debug=True):
         ax3.legend(frameon=False,loc='best')
         for tick in ax3.get_xticklabels():
             tick.set_rotation(45)
-        # add filling for even OBs 
+        # add filling for even OBs
         for i in range(0,nb_obs-2,2):
             ax3.fill_between(time_file[i:i+2].plot_date,0,ax3.get_ybound()[1], facecolor='blue', alpha=0.1)
         if np.mod(nb_obs,2)==0: #then you add the last one which is defined
             ax3.fill_between(time_file[nb_obs-2:nb_obs].plot_date,0,ax3.get_ybound()[1], facecolor='blue', alpha=0.1)
         else:
-            ax3.fill_between([time_file[-1].plot_date,time_atmos[-1].plot_date],0,ax3.get_ybound()[1], facecolor='blue', alpha=0.1)            
+            ax3.fill_between([time_file[-1].plot_date,time_atmos[-1].plot_date],0,ax3.get_ybound()[1], facecolor='blue', alpha=0.1)
         ax3.grid()
         ax3.set_xlim(time_min.plot_date,time_max.plot_date)
         ax3.xaxis.set_major_formatter(majorFormatter)
-            
+
         # plot the strehl in the graph 4
         ax4.plot_date(time_atmos.plot_date,atmos_param_df['strehl_sparta']*100,'.', color='darkorchid',markeredgecolor='none')
-        ax4.set_ylabel('Strehl (%)')        
+        ax4.set_ylabel('Strehl (%)')
         ax4.set_ylim(0,100)
         for i in range(0,nb_obs-2,2):
             ax4.fill_between(time_file[i:i+2].plot_date,0,100, facecolor='blue', alpha=0.1)
         if np.mod(nb_obs,2)==0: #then you add the last one which is defined
             ax4.fill_between(time_file[nb_obs-2:nb_obs].plot_date,0,100, facecolor='blue', alpha=0.1)
         else:
-            ax4.fill_between([time_file[-1].plot_date,time_atmos[-1].plot_date],0,100, facecolor='blue', alpha=0.1)            
+            ax4.fill_between([time_file[-1].plot_date,time_atmos[-1].plot_date],0,100, facecolor='blue', alpha=0.1)
         for tick in ax4.get_xticklabels():
             tick.set_rotation(45)
         ax4.grid()
         ax4.set_xlim(time_min.plot_date,time_max.plot_date)
         ax4.xaxis.set_major_formatter(majorFormatter)
-                    
+
         # plot the strehl, seeing and flux in the graph 5
         med_lin_flux = np.median(flux_VisLoop_interpolated)
         size_strehl = flux_VisLoop_interpolated/med_lin_flux*20
@@ -782,7 +791,7 @@ def plot_sparta_data(path_raw='.',path_output=None,plot=True,debug=True):
         if np.mod(nb_obs,2)==0: #then you add the last one which is defined
             ax5.fill_between(time_file[nb_obs-2:nb_obs].plot_date,min_y,max_y, facecolor='blue', alpha=0.1)
         else:
-            ax5.fill_between([time_file[-1].plot_date,time_atmos[-1].plot_date],min_y,max_y, facecolor='blue', alpha=0.1)            
+            ax5.fill_between([time_file[-1].plot_date,time_atmos[-1].plot_date],min_y,max_y, facecolor='blue', alpha=0.1)
         for i,time_filei in enumerate(time_file):
             ax5.text(time_filei.plot_date, max_y-(max_y-min_y)*0.3,new_name[i], fontsize=10,rotation=90)#min_y+(max_y-min_y)/5.
         for tick in ax5.get_xticklabels():
@@ -797,9 +806,9 @@ def plot_sparta_data(path_raw='.',path_output=None,plot=True,debug=True):
             ax6.plot_date(time_mass_dimm_asm.plot_date,np.asarray(mass_df['MASS-DIMM_fracgl'])*100.,'.',color='palevioletred',label='MASS-DIMM',markeredgecolor='none')
         except Exception as e:
             if debug:
-                print('No MASS-DIMM data available for the plot 6: {0:s}'.format(str(e)))            
+                print('No MASS-DIMM data available for the plot 6: {0:s}'.format(str(e)))
         try:
-            ax6.plot_date(time_slodar_asm.plot_date,slodar_df['slodar_surface_layer_fraction']*100,'.', color='black',markeredgecolor='none',label='SLODAR surface layer')   
+            ax6.plot_date(time_slodar_asm.plot_date,slodar_df['slodar_surface_layer_fraction']*100,'.', color='black',markeredgecolor='none',label='SLODAR surface layer')
             ax6.plot_date(time_slodar_asm.plot_date,slodar_df['slodar_GLfrac_500m']*100,'.', color='red',markeredgecolor='none',label='SLODAR 500m')
             ax6.plot_date(time_slodar_asm.plot_date,slodar_df['slodar_GLfrac_300m']*100,'.', color='blue',markeredgecolor='none',label='SLODAR 300m')
         except Exception as e:
@@ -808,14 +817,14 @@ def plot_sparta_data(path_raw='.',path_output=None,plot=True,debug=True):
         ax6.set_ylabel('Ground layer fraction (%)')
         for tick in ax6.get_xticklabels():
             tick.set_rotation(45)
-        # add filling for even OBs 
+        # add filling for even OBs
         min_y,max_y = [0,100] #ax6.get_ybound()
         for i in range(0,nb_obs-2,2):
             ax6.fill_between(time_file[i:i+2].plot_date,min_y,max_y, facecolor='blue', alpha=0.1)
         if np.mod(nb_obs,2)==0: #then you add the last one which is defined
             ax6.fill_between(time_file[nb_obs-2:nb_obs].plot_date,min_y,max_y, facecolor='blue', alpha=0.1)
         else:
-            ax6.fill_between([time_file[-1].plot_date,time_atmos[-1].plot_date],min_y,max_y, facecolor='blue', alpha=0.1)            
+            ax6.fill_between([time_file[-1].plot_date,time_atmos[-1].plot_date],min_y,max_y, facecolor='blue', alpha=0.1)
         ax6.set_xlim(time_min.plot_date,time_max.plot_date)
         ax6.set_ylim(min_y,max_y)
         ax6.grid()
@@ -828,7 +837,7 @@ def plot_sparta_data(path_raw='.',path_output=None,plot=True,debug=True):
             ax7.plot_date(time_mass_dimm_asm.plot_date,mass_df['MASS-DIMM_turb_speed'],'.',color='palevioletred',label='MASS',markeredgecolor='none')
         except Exception as e:
             if debug:
-                print('No MASS-DIMM data available for the plot 7: {0:s}'.format(str(e)))            
+                print('No MASS-DIMM data available for the plot 7: {0:s}'.format(str(e)))
 #        try:
 #            ax7.plot_date(time_sphere.plot_date,sphere_df['TEL AMBI WINDSP'],'.', color='rosybrown',markeredgecolor='none',label='TEL.AMBI.WINDSPD')
 #        except Exception as e:
@@ -838,35 +847,35 @@ def plot_sparta_data(path_raw='.',path_output=None,plot=True,debug=True):
             ax7.plot_date(time_asm.plot_date,asm_df['windspeed_30m'],'.',color='rosybrown',label='ASM 30m',markeredgecolor='none')
         except Exception as e:
             if debug:
-                print('No ASM data available for the plot 7: {0:s}'.format(str(e)))            
+                print('No ASM data available for the plot 7: {0:s}'.format(str(e)))
         try:
             ax7.plot_date(time_ecmwf.plot_date,pd_ecmwf['ecmwf_200mbar_windspeed[m/s]']*0.4,'.',color='blue',label='200mbar * 0.4',markeredgecolor='none')
         except Exception as e:
             if debug:
-                print('No ECMWF data available for the plot 7: {0:s}'.format(str(e)))            
+                print('No ECMWF data available for the plot 7: {0:s}'.format(str(e)))
 
         ax7.set_ylabel('Wind speed (m/s)')
         for tick in ax7.get_xticklabels():
             tick.set_rotation(45)
-        # add filling for even OBs 
+        # add filling for even OBs
         min_y,max_y = ax7.get_ybound()
         for i in range(0,nb_obs-2,2):
             ax7.fill_between(time_file[i:i+2].plot_date,min_y,max_y, facecolor='blue', alpha=0.1)
         if np.mod(nb_obs,2)==0: #then you add the last one which is defined
             ax7.fill_between(time_file[nb_obs-2:nb_obs].plot_date,min_y,max_y, facecolor='blue', alpha=0.1)
         else:
-            ax7.fill_between([time_file[-1].plot_date,time_atmos[-1].plot_date],min_y,max_y, facecolor='blue', alpha=0.1)            
+            ax7.fill_between([time_file[-1].plot_date,time_atmos[-1].plot_date],min_y,max_y, facecolor='blue', alpha=0.1)
         ax7.set_xlim(time_min.plot_date,time_max.plot_date)
         ax7.set_ylim(min_y,max_y)
         ax7.grid()
         ax7.legend(frameon=False,loc='best',fontsize=10)
         ax7.xaxis.set_major_formatter(majorFormatter)
-            
+
         fig.savefig(os.path.join(path_output,'sparta_plot_{0:s}.pdf'.format(str(current_night))))
         #plt.close(1)
 
 
-    return 
+    return
 
 def convert_keyword_coord(keyword_coord):
     """
@@ -915,7 +924,7 @@ if __name__ == "__main__":
         elif opt in ("-o", "--ofolder"):
             path_output = arg
     if path_raw==None or path_output==None:
-        # in this case we assume the 1st arg is the date and we save 
+        # in this case we assume the 1st arg is the date and we save
         # the result in my folder
         date = sys.argv[1]
         path_raw = os.path.join('/data-ut3/raw',date)

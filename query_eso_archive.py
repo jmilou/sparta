@@ -31,15 +31,15 @@ def query_dimm(path,start_date='2017-04-28T00:00:00.00',\
         - start_date: the date (and time) for the query start, in the isot format
                     (for instance '2017-04-28T00:00:00.00')
         - end_date: the date (and time) for the query end, in the isot format
-                    (for instance '2017-04-28T00:00:00.00')                    
+                    (for instance '2017-04-28T00:00:00.00')
     """
     filename = 'dimm_query_{0:s}_{1:s}.csv'.format(start_date,end_date)
     request_asm_str = ['wget','-O',os.path.join(path,filename),\
                        'http://archive.eso.org/wdb/wdb/asm/dimm_paranal/query?wdbo=csv&start_date={0:s}..{1:s}&tab_fwhm=1&tab_rfl=0&tab_rfl_time=0&top=1000000'.format(\
                        start_date,end_date)]
     output,error = subprocess.Popen(request_asm_str,stdout=subprocess.PIPE,stderr=subprocess.STDOUT).communicate()
-    print(' '.join(request_asm_str))
-    print(output.decode('UTF8'))
+    #print(' '.join(request_asm_str))
+    #print(output.decode('UTF8'))
     df = pd.read_csv(os.path.join(path,filename),skiprows=1,skipfooter=5,\
                      parse_dates=True, index_col='Date time',\
                      infer_datetime_format=True)
@@ -48,7 +48,7 @@ def query_dimm(path,start_date='2017-04-28T00:00:00.00',\
 def query_mass(path,start_date='2017-04-28T00:00:00.00',\
                end_date='2017-05-01T12:00:00.00'):
     """
-    Query the ASM mass-dimm archive (available from April 2016 onwards, with a gap 
+    Query the ASM mass-dimm archive (available from April 2016 onwards, with a gap
      between 2017-02-01 (noon) and 2017-05-19 (noon) (UT)),
     saves the result in a csv file and returns the table as a panda data frame.
     We limit the search to 1 000 000 lines. If more is expected, pay attention
@@ -57,15 +57,15 @@ def query_mass(path,start_date='2017-04-28T00:00:00.00',\
         - start_date: the date (and time) for the query start, in the isot format
                     (for instance '2017-04-28T00:00:00.00')
         - end_date: the date (and time) for the query end, in the isot format
-                    (for instance '2017-04-28T00:00:00.00')                    
+                    (for instance '2017-04-28T00:00:00.00')
     """
     filename = 'mass_query_{0:s}_{1:s}.csv'.format(start_date,end_date)
     request_asm_str = ['wget','-O',os.path.join(path,filename),\
                        'http://archive.eso.org/wdb/wdb/asm/mass_paranal/query?wdbo=csv&start_date={0:s}..{1:s}&tab_fwhm=1&tab_fwhmerr=0&tab_tau=1&tab_tauerr=0&tab_tet=1&tab_teterr=0&tab_alt=1&tab_alterr=0&tab_fracgl=1&tab_turbfwhm=1&tab_tau0=1&tab_tet0=1&tab_turb_alt=1&tab_turb_speed=1&top=1000000'.format(\
                        start_date,end_date)]
     output,error = subprocess.Popen(request_asm_str,stdout=subprocess.PIPE,stderr=subprocess.STDOUT).communicate()
-    print(' '.join(request_asm_str))
-    print(output.decode('UTF8'))
+    #print(' '.join(request_asm_str))
+    #print(output.decode('UTF8'))
     df = pd.read_csv(os.path.join(path,filename),skiprows=1,skipfooter=5,\
                      parse_dates=True, index_col='Date time',\
                      infer_datetime_format=True)
@@ -82,20 +82,20 @@ def query_ecmwf_jetstream(path,start_date='2017-04-28T00:00:00.00',\
         - start_date: the date (and time) for the query start, in the isot format
                     (for instance '2017-04-28T00:00:00.00')
         - end_date: the date (and time) for the query end, in the isot format
-                    (for instance '2017-04-28T00:00:00.00')                    
+                    (for instance '2017-04-28T00:00:00.00')
     """
-    filename = 'ecmwf_jetstream_query_{0:s}_{1:s}.txt'.format(start_date,end_date)    
+    filename = 'ecmwf_jetstream_query_{0:s}_{1:s}.txt'.format(start_date,end_date)
     request_asm_str = ['wget','-O',os.path.join(path,filename),\
                    'http://www.eso.org/asm/api/?from={0:s}&to={1:s}Z&fields=asmmetnow-jsspeed'.format(\
                        start_date,end_date)]
     output,error = subprocess.Popen(request_asm_str,stdout=subprocess.PIPE,stderr=subprocess.STDOUT).communicate()
-    print(' '.join(request_asm_str))
-    print(output.decode('UTF8'))    
+    #print(' '.join(request_asm_str))
+    #print(output.decode('UTF8'))
     with open (os.path.join(path,filename), "r") as myfile:
         txt_string=myfile.read() #.replace('\n', '')
     txt_string = txt_string[txt_string.index('[[')+2:txt_string.index(']]')].split('],[')
     dico={'date':[],'ecmwf_jetstream_windspeed_m/s':[]}
-    for txt in txt_string:        
+    for txt in txt_string:
         date_str,speed_str = txt.split(',')
         time_tmp = Time(int(date_str)/1000.,format='unix')
         time_tmp.format='isot'
@@ -120,10 +120,10 @@ def interpolate_date(dates_input,param_input,dates_output,plot=True,kind='linear
             interpolation of first, second or third order) or as an integer
             specifying the order of the spline interpolator to use.
             Default is 'linear'.
-    """    
+    """
     interp_function = interp1d(dates_input.mjd,param_input,\
                                kind=kind,bounds_error=False,fill_value=fill_value)
-    param_output = interp_function(dates_output.mjd) 
+    param_output = interp_function(dates_output.mjd)
 #    dates_output.format='iso'
 #    dates_input.format='iso'
     if plot:
@@ -145,8 +145,8 @@ def interpolate_date(dates_input,param_input,dates_output,plot=True,kind='linear
         plt.show()
 #        plt.savefig('', bbox_inches = 'tight')
     return param_output
-    
-    
+
+
 def query_meteo(path,start_date='2017-04-28T00:00:00.00',\
                end_date='2017-05-01T12:00:00.00'):
     """
@@ -157,7 +157,7 @@ def query_meteo(path,start_date='2017-04-28T00:00:00.00',\
         - start_date: the date (and time) for the query start, in the isot format
                     (for instance '2017-04-28T00:00:00.00')
         - end_date: the date (and time) for the query end, in the isot format
-                    (for instance '2017-04-28T00:00:00.00')   
+                    (for instance '2017-04-28T00:00:00.00')
     Output: a panda data frame with the columns
         Date time
         Wind Direction at 30m (0/360) [deg]
@@ -173,22 +173,22 @@ def query_meteo(path,start_date='2017-04-28T00:00:00.00',\
                    'http://archive.eso.org/wdb/wdb/asm/meteo_paranal/query?wdbo=csv&start_date={0:s}..{1:s}&tab_press=0&tab_presqnh=0&tab_temp1=0&tab_temp2=0&tab_temp3=0&tab_temp4=0&tab_tempdew1=0&tab_tempdew2=0&tab_tempdew4=0&tab_dustl1=0&tab_dustl2=0&tab_dusts1=0&tab_dusts2=0&tab_rain=0&tab_rhum1=0&tab_rhum2=0&tab_rhum4=0&tab_wind_dir1=1&tab_wind_dir1_180=0&tab_wind_dir2=1&tab_wind_dir2_180=0&tab_wind_speed1=1&tab_wind_speed2=1&tab_wind_speedu=1&tab_wind_speedv=1&tab_wind_speedw=1&top=5000000'.format(\
                        start_date,end_date)]
     output,error = subprocess.Popen(request_asm_str,stdout=subprocess.PIPE,stderr=subprocess.STDOUT).communicate()
-    print(' '.join(request_asm_str))
-    print(output.decode('UTF8'))
+    #print(' '.join(request_asm_str))
+    #print(output.decode('UTF8'))
     df = pd.read_csv(os.path.join(path,filename),skiprows=1,skipfooter=5,engine='python')
     return df
 
 def query_simbad(date,coords,name=None,debug=True,limit_G_mag=15):
     """
-    Function that tries to query Simbad to find the object. 
-    It first tries to see if the star name (optional argument) is resolved 
+    Function that tries to query Simbad to find the object.
+    It first tries to see if the star name (optional argument) is resolved
     by Simbad. If not it searches for the pointed position (ra and
-    dec) in a cone of radius 10 arcsec. If more than a star is detected, it 
+    dec) in a cone of radius 10 arcsec. If more than a star is detected, it
     takes the closest from the (ra,dec).
     Input:
         - date: an astropy.time.Time object (e.g. date = Time(header['DATE-OBS'])
         - name: a string with the name of the source.
-        - coords: a SkyCoord object. For instance, if we extract the keywords 
+        - coords: a SkyCoord object. For instance, if we extract the keywords
             of the fits files, we should use
             coords = coord.SkyCoord(header['RA']*u.degree,header['DEC']*u.degree)
             coord.SkyCoord('03h32m55.84496s -09d27m2.7312s', ICRS)
@@ -207,43 +207,43 @@ def query_simbad(date,coords,name=None,debug=True,limit_G_mag=15):
                                  'dec(2;D;FK5;J{0:.3f};2000)'.format(date.jyear))
     # First we do a cone search around he coordinates
     search = customSimbad.query_region(coords,radius=search_radius)
-    
+
     if search is None and name is None:
         # If the cone search failed and no name is provided we cannot do anything more
-        print('No star identified for the RA/DEC pointing. Enlarging the search to {0:.0f} arcsec'.format(search_radius_alt.value))
+        #print('No star identified for the RA/DEC pointing. Enlarging the search to {0:.0f} arcsec'.format(search_radius_alt.value))
         search = customSimbad.query_region(coords,radius=search_radius_alt)
         if search is None:
-            print('No star identified for the RA/DEC pointing. Stopping the search.')
+            #print('No star identified for the RA/DEC pointing. Stopping the search.')
             return None
         else:
             validSearch = search[search['FLUX_G']<limit_G_mag]
-            nb_stars = len(validSearch)                
-        
+            nb_stars = len(validSearch)
+
     elif search is None and name is not None:
         # If the cone search failed but a name is provided, we query that name
-        print('No star identified within {0:.0f} arcsec of the RA/DEC pointing. Querying the target name {1:s}'.format(search_radius.to(u.arcsec).value,name))
+        #print('No star identified within {0:.0f} arcsec of the RA/DEC pointing. Querying the target name {1:s}'.format(search_radius.to(u.arcsec).value,name))
         # get the star from target name
         simbad_dico = get_dico_star_properties_from_simbad_target_name_search(name,customSimbad)
-        if 'simbad_FLUX_V' in simbad_dico.keys():  
-            nb_stars = -1 # nothing else to be done! 
-            print('Star {0:s} identified using the target name'.format(simbad_dico['simbad_MAIN_ID']))
+        if 'simbad_FLUX_V' in simbad_dico.keys():
+            nb_stars = -1 # nothing else to be done!
+            #print('Star {0:s} identified using the target name'.format(simbad_dico['simbad_MAIN_ID']))
         else:
-            print('No star corresponding to the target name {0:s}. Enlarging the search to {1:.0f} arcsec'.format(name,search_radius_alt.value))
+            #print('No star corresponding to the target name {0:s}. Enlarging the search to {1:.0f} arcsec'.format(name,search_radius_alt.value))
             search = customSimbad.query_region(coords,radius=search_radius_alt)
             if search is None:
-                print('No star identified for the RA/DEC pointing. Stopping the search.')
+                #print('No star identified for the RA/DEC pointing. Stopping the search.')
                 return None
             else:
                 validSearch = search[search['FLUX_G']<limit_G_mag]
-                nb_stars = len(validSearch)                
+                nb_stars = len(validSearch)
     else:
         # If the cone search returned some results, we count the valid candidates.
         nb_stars = len(search)
         validSearch = search[search['FLUX_G']<limit_G_mag]
-        nb_stars = len(validSearch)    
-        
+        nb_stars = len(validSearch)
+
     if nb_stars==0:
-        print('No star identified for the pointing position. Querying the target name')
+        #print('No star identified for the pointing position. Querying the target name')
         # get the star from target name if we have it in the text file.
         simbad_dico = get_dico_star_properties_from_simbad_target_name_search(name,customSimbad)
         # if we found a star, we add the distance between ICRS coordinates and pointing
@@ -261,17 +261,17 @@ def query_simbad(date,coords,name=None,debug=True,limit_G_mag=15):
     elif nb_stars>0:
         if nb_stars ==1:
             i_min=0
-            print('One star found: {0:s} with G={1:.1f}'.format(\
-                  validSearch['MAIN_ID'][i_min],validSearch['FLUX_G'][i_min]))
+            #print('One star found: {0:s} with G={1:.1f}'.format(\
+            #      str(validSearch['MAIN_ID'][i_min]),validSearch['FLUX_G'][i_min]))
         else:
-            print('{0:d} stars identified within {1:.0f} or {2:.0f} arcsec. Querying the target name'.format(nb_stars,search_radius.value,search_radius_alt.value)) 
+            #print('{0:d} stars identified within {1:.0f} or {2:.0f} arcsec. Querying the target name'.format(nb_stars,search_radius.value,search_radius_alt.value))
             # First we query the target name
             simbad_dico = get_dico_star_properties_from_simbad_target_name_search(name,customSimbad)
             if ('simbad_MAIN_ID' in simbad_dico):
-                # the star was resolved and we assume there is a single object corresponding to the search 
+                # the star was resolved and we assume there is a single object corresponding to the search
                 i_min=0
             else:
-                print('Target not resolved or not in the list. Selecting the closest star.')
+                #print('Target not resolved or not in the list. Selecting the closest star.')
                 sep_list = []
                 for key in validSearch.keys():
                     if key.startswith('RA_2_A_FK5_'):
@@ -286,27 +286,28 @@ def query_simbad(date,coords,name=None,debug=True,limit_G_mag=15):
                     sep_list.append(coords.separation(coords_i).to(u.arcsec).value)
                 i_min = np.argmin(sep_list)
                 min_sep = np.min(sep_list)
-                print('The closest star is: {0:s} with G={1:.1f} at {2:.2f} arcsec'.format(\
-                  validSearch['MAIN_ID'][i_min],validSearch['FLUX_G'][i_min],min_sep))
+                #print('The closest star is: {0:s} with G={1:.1f} at {2:.2f} arcsec'.format(\
+                #  validSearch['MAIN_ID'][i_min],validSearch['FLUX_G'][i_min],min_sep))
         simbad_dico = populate_simbad_dico(validSearch,i_min)
     simbad_dico['DEC'] = coords.dec.to_string(unit=u.degree,sep=' ')
     simbad_dico['RA'] = coords.ra.to_string(unit=u.hourangle,sep=' ')
     # if we found a star, we add the distance between ICRS coordinates and pointing
     if 'simbad_RA_ICRS' in simbad_dico.keys() and 'simbad_DEC_ICRS' in simbad_dico.keys():
-        coords_ICRS_str = ' '.join([simbad_dico['simbad_RA_ICRS'],simbad_dico['simbad_DEC_ICRS']])
-        coords_ICRS = coord.SkyCoord(coords_ICRS_str,frame=ICRS,unit=(u.hourangle,u.deg))
-        sep_pointing_ICRS = coords.separation(coords_ICRS).to(u.arcsec).value
-        simbad_dico['simbad_separation_RADEC_ICRSJ2000']=sep_pointing_ICRS
+        if type(simbad_dico['simbad_RA_ICRS'])==str and type(simbad_dico['simbad_DEC_ICRS'])==str:
+            coords_ICRS_str = ' '.join([simbad_dico['simbad_RA_ICRS'],simbad_dico['simbad_DEC_ICRS']])
+            coords_ICRS = coord.SkyCoord(coords_ICRS_str,frame=ICRS,unit=(u.hourangle,u.deg))
+            sep_pointing_ICRS = coords.separation(coords_ICRS).to(u.arcsec).value
+            simbad_dico['simbad_separation_RADEC_ICRSJ2000']=sep_pointing_ICRS
     # if we found a star, we add the distance between Simbad current coordinates and pointing
     if 'simbad_RA_current' in simbad_dico.keys() and 'simbad_DEC_current' in simbad_dico.keys():
         coords_current_str = ' '.join([simbad_dico['simbad_RA_current'],simbad_dico['simbad_DEC_current']])
         coords_current = coord.SkyCoord(coords_current_str,frame=ICRS,unit=(u.hourangle,u.deg))
         sep_pointing_current = coords.separation(coords_current).to(u.arcsec).value
         simbad_dico['simbad_separation_RADEC_current']=sep_pointing_current
-        print('Distance between the current star position and pointing position: {0:.1f}arcsec'.format(sep_pointing_current))
+        #print('Distance between the current star position and pointing position: {0:.1f}arcsec'.format(sep_pointing_current))
     # if we found a star with no R magnitude but with known V mag and spectral type, we compute the R mag.
     if 'simbad_FLUX_V' in simbad_dico.keys() and 'simbad_SP_TYPE' in simbad_dico.keys() and 'simbad_FLUX_R' not in simbad_dico.keys():
-        color_VminusR = color(simbad_dico['simbad_SP_TYPE'],filt='V-R')
+        color_VminusR = color(str(simbad_dico['simbad_SP_TYPE']),filt='V-R')
         if np.isfinite(color_VminusR) and np.isfinite(simbad_dico['simbad_FLUX_V']):
             simbad_dico['simbad_FLUX_R'] = simbad_dico['simbad_FLUX_V'] - color_VminusR
     return simbad_dico
@@ -330,9 +331,9 @@ def get_dico_star_properties_from_simbad_target_name_search(name,customSimbad):
 def populate_simbad_dico(simbad_search_list,i):
     """
     Method not supposed to be used outside the query_simbad method
-    Given the result of a simbad query (list of simbad objects), and the index of 
+    Given the result of a simbad query (list of simbad objects), and the index of
     the object to pick, creates a dictionary with the entries needed.
-    """    
+    """
     simbad_dico = {}
     for key in simbad_search_list.keys():
         if key in ['MAIN_ID','SP_TYPE','ID_HD','OTYPE','OTYPE_V','OTYPE_3']: #strings
@@ -341,16 +342,16 @@ def populate_simbad_dico(simbad_search_list,i):
         elif key in ['FLUX_V', 'FLUX_R', 'FLUX_G','FLUX_I', 'FLUX_J', 'FLUX_H', 'FLUX_K','PMDEC','PMRA']: #floats
             if not simbad_search_list[key].mask[i]:
                 simbad_dico['simbad_'+key] = float(simbad_search_list[key][i])
-        elif key.startswith('RA_2_A_FK5_'): 
-            simbad_dico['simbad_RA_current'] = simbad_search_list[key][i]      
-        elif key.startswith('DEC_2_D_FK5_'): 
+        elif key.startswith('RA_2_A_FK5_'):
+            simbad_dico['simbad_RA_current'] = simbad_search_list[key][i]
+        elif key.startswith('DEC_2_D_FK5_'):
             simbad_dico['simbad_DEC_current'] = simbad_search_list[key][i]
         elif key=='RA':
             simbad_dico['simbad_RA_ICRS'] = simbad_search_list[key][i]
         elif key=='DEC':
-            simbad_dico['simbad_DEC_ICRS'] = simbad_search_list[key][i]     
+            simbad_dico['simbad_DEC_ICRS'] = simbad_search_list[key][i]
     return simbad_dico
-    
+
 #ra = 10.*u.degree
 #dec = -24*u.degree
 #testCoord = coord.SkyCoord(ra,dec)
@@ -358,12 +359,12 @@ def populate_simbad_dico(simbad_search_list,i):
 #testCoord = coord.SkyCoord('03h32m55.84496s -09d27m29.7312s', ICRS)
 ##testCoord = coord.SkyCoord('03h32m55.84496s -09d27m12.7312s', ICRS)
 #date = Time('2017-01-01T02:00:00.0')
-#test=query_simbad(date,testCoord,name='eps Eri')     
+#test=query_simbad(date,testCoord,name='eps Eri')
 
 def read_color_table():
     """
     Read the csv file Johnson_color_stars.txt, built from the website
-    http://www.stsci.edu/~inr/intrins.html and that gives the Johnson colors 
+    http://www.stsci.edu/~inr/intrins.html and that gives the Johnson colors
     of stars depending on their spectral type.
     """
     tablename=os.path.join(path_data,'Johnson_color_stars.txt')
@@ -373,16 +374,16 @@ def read_color_table():
 def extract_spectral_type_code(sp_type_str):
     """
     Function that uses the spectral type given by Simbad (for instance
-    G2IV, F5V, G5V+DA1.0, M1.4, M1.5, or F0IV) and that returns 
-    the code from 0=B0.0 to 49=M4.0 (same convention as in 
-    http://www.stsci.edu/~inr/intrins.html)    
+    G2IV, F5V, G5V+DA1.0, M1.4, M1.5, or F0IV) and that returns
+    the code from 0=B0.0 to 49=M4.0 (same convention as in
+    http://www.stsci.edu/~inr/intrins.html)
     """
     if not isinstance(sp_type_str,str):
         if isinstance(sp_type_str,unicode):
             sp_type_str=str(sp_type_str)
         else:
-            print('Argument is not a string. Returning.')
-            print(sp_type_str)
+            #print('Argument is not a string. Returning.')
+            #print(sp_type_str)
             return
     spectral_type_letter = (sp_type_str[0:1]).upper()
     if spectral_type_letter=='B':
@@ -398,7 +399,7 @@ def extract_spectral_type_code(sp_type_str):
     elif spectral_type_letter=='M':
         offset_code = 48.
     else:
-        print('The spectral letter extracted from {0:s} is not within B, A, F, G, K, M. Returning'.format(spectral_type_letter))
+        #print('The spectral letter extracted from {0:s} is not within B, A, F, G, K, M. Returning'.format(spectral_type_letter))
         return
     if sp_type_str[2:3] == '.':
         spectral_type_number = float(sp_type_str[1:4])
@@ -407,25 +408,25 @@ def extract_spectral_type_code(sp_type_str):
             spectral_type_number = float(sp_type_str[1:2])
         except:
             spectral_type_number = 0
-            print('The spectral type {0:s} could not not be accurately determined.'.format(sp_type_str))
+            #print('The spectral type {0:s} could not not be accurately determined.'.format(sp_type_str))
     return offset_code+spectral_type_number
-    
+
 
 def color(sp_type_str,filt='V-R'):
     """
-    Reads the table from http://www.stsci.edu/~inr/intrins.html and returns the 
+    Reads the table from http://www.stsci.edu/~inr/intrins.html and returns the
     color of the star corresponding to the spectral type given in input.
     Input:
-        - sp_type_str: a string representing a spectral type, such as that returned 
+        - sp_type_str: a string representing a spectral type, such as that returned
             by a simbad query. Some examples of such strings are
             G2IV, F5V, G5V+DA1.0, M1.4, M1.5, or F0IV
         - filt: a string representing a color, to be chose between
-            U-B, B-V, V-R, V-I, V-J, V-H, V-K, V-L, V-M, V-N. By default it is 
-            V-R. 
+            U-B, B-V, V-R, V-I, V-J, V-H, V-K, V-L, V-M, V-N. By default it is
+            V-R.
     """
     table = read_color_table()
     if filt not in table.keys():
-        print('The color requested "{0:s}" is not in the color table.'.format(filt))
+        #print('The color requested "{0:s}" is not in the color table.'.format(filt))
         return
     code = extract_spectral_type_code(sp_type_str)
     if not isinstance(code,(int, float)):
@@ -434,9 +435,9 @@ def color(sp_type_str,filt='V-R'):
     try:
         col = interp_function(code)
     except ValueError as e:
-        print('ValueError: {0:s}'.format(str(e)))
-        print('The spectral type code {0:.1f} is out of range'.format(code))
-        print('Returning NaN')   
+        #print('ValueError: {0:s}'.format(str(e)))
+        #print('The spectral type code {0:.1f} is out of range'.format(code))
+        #print('Returning NaN')
         return np.nan
     return float(col)
 
@@ -445,7 +446,7 @@ if __name__ == "__main__":
 #    c=color(sp_type_str)
 #    print(c)
 
-    path_ecmwf = '/Users/jmilli/Documents/atmospheric_parameters/ECMW_forecast' 
+    path_ecmwf = '/Users/jmilli/Documents/atmospheric_parameters/ECMW_forecast'
     start_date = '2018-10-27T00:00:00'
     end_date = '2018-10-28T00:00:00'
     # pd_ecmwf = query_ecmwf_jetstream(path_ecmwf,start_date,end_date)
@@ -456,7 +457,7 @@ if __name__ == "__main__":
     test_coordinates = coord.SkyCoord.from_name('HIP 87937')
     # test_coordinates = coord.SkyCoord('17h57m48.4997s +04d44m36.111s', frame=ICRS)
     simbad_dico = query_simbad(date_test,test_coordinates,name=None,debug=True)
-    print(simbad_dico)
+    #print(simbad_dico)
 
 
     # radius = u.Quantity(12.0, u.arcsec)

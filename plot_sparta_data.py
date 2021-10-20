@@ -76,6 +76,9 @@ def plot_sparta_data(path_output=Path('.'),files=[],plot=True,verbose=True):
     sec_VisLoop=[] # list of strings in unix format for time of 
     flux_VisLoop=[] # list of fluxes for the visible WFS
     wfs_mode_VisLoop=[] # list of wfs mode for the visible WFS    
+    spectral_filter=[]
+    ins_mode = []
+    vis_nir_beam_splitter = []
     sec_IRLoop=[] # list of strings in unix format for time of 
     flux_IRLoop=[] # list of fluxes for the IR DTTS images
     sec_img_DTTS=[] # list of strings in unix format for time of 
@@ -101,8 +104,11 @@ def plot_sparta_data(path_output=Path('.'),files=[],plot=True,verbose=True):
             continue
         name = np.append(name,header['HIERARCH ESO OBS NAME']) # OB name
         wfs_mode = header['HIERARCH ESO AOS VISWFS MODE']
-        gain = int(wfs_mode[wfs_mode.index('GAIN_')+5:wfs_mode.index('_FREQ')])
-        freq = int(wfs_mode[wfs_mode.index('FREQ_')+5:wfs_mode.index('Hz')])
+        # gain = int(wfs_mode[wfs_mode.index('GAIN_')+5:wfs_mode.index('_FREQ')])
+        # freq = int(wfs_mode[wfs_mode.index('FREQ_')+5:wfs_mode.index('Hz')])
+        spectral_filter_tmp = header['HIERARCH ESO INS4 FILT3 NAME']
+        ins_mode_tmp = header['HIERARCH ESO INS4 MODE']
+        vis_nir_beam_splitter_tmp = header['HIERARCH ESO INS4 OPTI16 NAME'] 
         date_start_str_tmp = header['DATE'] # starting date (temporary because earlier times might be contained in the file)
         date_start_tmp = Time(date_start_str_tmp) # converted to a Time object
         ra = header['RA']*u.degree
@@ -133,6 +139,9 @@ def plot_sparta_data(path_output=Path('.'),files=[],plot=True,verbose=True):
         if len(tmp_flux_VisLoop) > 0:
             flux_VisLoop = np.append(flux_VisLoop,tmp_flux_VisLoop)
             wfs_mode_VisLoop = np.append(wfs_mode_VisLoop,[wfs_mode]*len(tmp_flux_VisLoop))
+            spectral_filter = np.append(spectral_filter,[spectral_filter_tmp]*len(tmp_flux_VisLoop))
+            ins_mode = np.append(ins_mode,[ins_mode_tmp]*len(tmp_flux_VisLoop))
+            vis_nir_beam_splitter = np.append(vis_nir_beam_splitter,[vis_nir_beam_splitter_tmp]*len(tmp_flux_VisLoop))
             sec_VisLoop = np.append(sec_VisLoop,tmp_sec_VisLoop)
             date_start_tmp = np.min([date_start_tmp,Time(tmp_sec_VisLoop[0],format='unix')])
             if verbose:
@@ -365,7 +374,10 @@ def plot_sparta_data(path_output=Path('.'),files=[],plot=True,verbose=True):
             'flux_VisLoop[#ADU/subaperture/frame]':flux_VisLoop_raw,\
             'flux_VisLoop[#photons/subaperture/s]':flux_VisLoop_photons_per_subap_per_sec,\
             'flux_VisLoop[#photons/s]':flux_VisLoop_photons_total_per_sec,\
-            'WFS MODE':wfs_mode_VisLoop})
+            'WFS MODE':wfs_mode_VisLoop,'spectral_filter':spectral_filter,\
+            'WFS gain': gain_list,'WFS frequency':freq_list,\
+            'INS MODE':ins_mode,'VIS/NIR beam splitter':vis_nir_beam_splitter})
+        
     VisLoop_df.to_csv(path_output.joinpath('sparta_visible_WFS_{0:s}.csv'.format(str(current_night))),index=False)
 
     # We convert the DTTS time stamps in an dataframe (later we could add more informations

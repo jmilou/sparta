@@ -274,6 +274,21 @@ def plot_sparta_data(path_output=Path('.'),files=[],plot=True,verbose=True):
                 new_date_end_str.append(date_start_str[i+1])                
     new_date_end_str.append(time_max.iso)
 
+    # We convert the visWFS flux in photons per subaperture. visWFS is the flux on the whole pupil made of 1240 subapertures. 
+    nb_subapertures = 1240 # not used (we assumed flux_VisLoop is already given per subaperture )
+    ADU2photon = 270000/np.power(2,14) # 17 # ph/ADU (from Jeff email) = 270000/2^14
+    flux_VisLoop_raw = np.asarray(flux_VisLoop)
+    gain_list = np.asarray([int(wfs_mode_tmp[wfs_mode_tmp.index('GAIN_')+5:wfs_mode_tmp.index('_FREQ')]) for wfs_mode_tmp in wfs_mode_VisLoop])
+    freq_list = np.asarray([int(wfs_mode_tmp[wfs_mode_tmp.index('FREQ_')+5:wfs_mode_tmp.index('Hz')]) for wfs_mode_tmp in wfs_mode_VisLoop])
+    
+    flux_VisLoop_photons_per_subap_per_frame = flux_VisLoop_raw/gain_list*ADU2photon/nb_subapertures # in photons per subaperture per frame
+    flux_VisLoop_photons_per_subap_per_sec = flux_VisLoop_photons_per_subap_per_frame * freq_list
+    flux_VisLoop_photons_total_per_sec = flux_VisLoop_photons_per_subap_per_sec * nb_subapertures
+
+    #We interpolate the visWFS flux at the time where the strehl is known
+    flux_VisLoop_function = interp1d(time_VisLoop.mjd,flux_VisLoop_photons_per_subap_per_frame,kind='linear',bounds_error=False,fill_value="extrapolate")
+    flux_VisLoop_interpolated = flux_VisLoop_function(time_atmos.mjd) 
+
     # We print the info for each target.
     # We first create arrays (same dimension as new name) to store the median values and later save it.
     start_ob_list = []
@@ -284,7 +299,7 @@ def plot_sparta_data(path_output=Path('.'),files=[],plot=True,verbose=True):
     median_windSpeed_list = []
     median_r0_list = []
     median_flux_VisLoop_list = []
-    print('                                                        Strehl Seeing Tau0    Wind   r0     WFS flux   V mag')
+    print('                                                        Strehl Seeing Tau0    Wind   r0     WFS flux     G mag Freq Gain')
     for i,start_tmp_str in enumerate(new_date_start_str):
         end_tmp_str = new_date_end_str[i]
         start_tmp = Time(start_tmp_str,out_subfmt='date_hm')
@@ -297,12 +312,16 @@ def plot_sparta_data(path_output=Path('.'),files=[],plot=True,verbose=True):
             median_tau0= np.nanmedian(tau0[id_atmos])
             median_windSpeed= np.nanmedian(windSpeed[id_atmos])
             median_r0= np.nanmedian(r0[id_atmos])
-            median_flux_VisLoop = np.nanmedian(flux_VisLoop[id_VisWFS])
-            print('{0:s} from {1:s} to {2:s} {3:3.1f}%   {4:2.1f}"  {5:04.1f}ms {6:4.1f}m/s {7:3.1f}cm {8:3.1e}ADU {9:3.1f}'.format(\
+            median_flux_VisLoop = np.nanmedian(flux_VisLoop_photons_per_subap_per_frame[id_VisWFS])
+            unique_freq,counts_freq = np.unique(freq_list[id_VisWFS],return_counts=True)
+            most_used_freq = unique_freq[np.argmax(counts_freq)]
+            unique_gain,counts_gain = np.unique(gain_list[id_VisWFS],return_counts=True)
+            most_used_gain = unique_gain[np.argmax(counts_gain)]
+            print('{0:s} from {1:s} to {2:s} {3:3.1f}%   {4:2.1f}"  {5:04.1f}ms {6:4.1f}m/s {7:3.1f}cm {8:.1f}ph/sub/fr {9:3.1f} {10:4.0f} {11:4.0f}'.format(\
                   new_name[i].ljust(35)[0:35],\
                    start_tmp.value[11:],end_tmp.value[11:],median_strehl*100,\
                    median_seeing,median_tau0*1000,median_windSpeed,\
-                   median_r0*100,median_flux_VisLoop,simbad_dico['simbad_FLUX_V'][i]))
+                   median_r0*100,median_flux_VisLoop,simbad_dico['simbad_FLUX_G'][i],most_used_freq,most_used_gain))
             start_ob_list.append(start_tmp)
             end_ob_list.append(end_tmp)
             median_strehl_list.append(median_strehl)
@@ -337,22 +356,7 @@ def plot_sparta_data(path_output=Path('.'),files=[],plot=True,verbose=True):
 
     pd_simbad = pd.DataFrame(simbad_dico)
     pd_simbad.to_csv(path_output.joinpath('simbad_{0:s}.csv'.format(str(current_night))),index=False)
-        
-    # We convert the visWFS flux in photons per subaperture. visWFS is the flux on the whole pupil made of 1240 subapertures. 
-    nb_subapertures = 1240 # not used (we assumed flux_VisLoop is already given per subaperture )
-    ADU2photon = 270000/np.power(2,14) # 17 # ph/ADU (from Jeff email) = 270000/2^14
-    flux_VisLoop_raw = np.asarray(flux_VisLoop)
-    gain_list = np.asarray([int(wfs_mode_tmp[wfs_mode_tmp.index('GAIN_')+5:wfs_mode_tmp.index('_FREQ')]) for wfs_mode_tmp in wfs_mode_VisLoop])
-    freq_list = np.asarray([int(wfs_mode_tmp[wfs_mode_tmp.index('FREQ_')+5:wfs_mode_tmp.index('Hz')]) for wfs_mode_tmp in wfs_mode_VisLoop])
     
-    flux_VisLoop_photons_per_subap_per_frame = flux_VisLoop_raw/gain_list*ADU2photon/nb_subapertures # in photons per subaperture per frame
-    flux_VisLoop_photons_per_subap_per_sec = flux_VisLoop_photons_per_subap_per_frame * freq_list
-    flux_VisLoop_photons_total_per_sec = flux_VisLoop_photons_per_subap_per_sec * nb_subapertures
-
-    #We interpolate the visWFS flux at the time where the strehl is known
-    flux_VisLoop_function = interp1d(time_VisLoop.mjd,flux_VisLoop_photons_per_subap_per_frame,kind='linear',bounds_error=False,fill_value="extrapolate")
-    flux_VisLoop_interpolated = flux_VisLoop_function(time_atmos.mjd) 
-
     atmos_param_df = pd.DataFrame({'date':time_atmos,'tau0_los_sparta':tau0,\
                                    'seeing_los_sparta':seeing,\
                                    'wind_speed_los_sparta':windSpeed,\

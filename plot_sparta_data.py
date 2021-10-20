@@ -751,7 +751,7 @@ def plot_sparta_data(path_output=Path('.'),files=[],plot=True,verbose=True):
         ymax = np.percentile(np.append(flux_IRLoop,flux_VisLoop_photons_per_subap_per_frame),90)*10
         ax3.set_ylim(ymin,ymax)
         ax3.set_yscale("log", nonposy='clip')
-        ax3.set_ylabel('Flux in photons/aperture')
+        ax3.set_ylabel('Flux in phot./subap./frame')
         ax3.legend(frameon=False,loc='best')
         for tick in ax3.get_xticklabels():
             tick.set_rotation(45)

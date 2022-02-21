@@ -346,6 +346,12 @@ def plot_sparta_data(path_output=Path('.'),files=[],plot=True,verbose=True):
         current_night_datetime = current_datetime - timedelta(days=1)
         current_night = current_night_datetime.date()
 
+
+    print('new_name',len(new_name))
+    print('start_ob_list',len(start_ob_list))
+    print('median_seeing_list',len(median_seeing_list))
+    print("simbad_dico['simbad_FLUX_V']",len(simbad_dico['simbad_FLUX_V']))
+    print("simbad_dico['simbad_FLUX_G']",len(simbad_dico['simbad_FLUX_G']))
     pd_summary = pd.DataFrame({'OB_name':new_name,'start_UT':[str(st) for st in start_ob_list],\
                                'end_UT':[str(st) for st in end_ob_list],'strehl_sparta':median_strehl_list,\
                                'seeing_los_sparta':median_seeing_list,'tau0_los_sparta':median_tau0_list,\
@@ -938,7 +944,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Query the ESO archive to find SPHERE SPARTA data from a given night, extract the data in easy to read csv files, complement with ASM data and create plots.')
     parser.add_argument('-n','--night', help="Night (format: '2020-02-01') from which to download SPARTA data. The night starts at 19:00 UT on that date and goes up to the next date at 14:00UT", type=str)
     parser.add_argument('-i','--input', type=str, help='SPARTA fits file(s) you want to process (optional)', nargs='*')
-    parser.add_argument('-a','--analyse', help='analyse the SPARTA data', action='store_false') 
+    parser.add_argument('-a','--analyse', help='analyse the SPARTA data', action='store_true') 
     parser.add_argument('--prog_id', help='Program ID of the desired files (optional). For instance "098.C-0422(B)". It can also be  "098.C-04*"',
                         type=str) # default='',
     parser.add_argument('-v', "--verbose", action="store_false",

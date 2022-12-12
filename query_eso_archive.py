@@ -45,6 +45,31 @@ def query_dimm(path,start_date='2017-04-28T00:00:00.00',\
                      infer_datetime_format=True)
     return df
 
+def query_old_dimm(path,start_date='2015-04-28T00:00:00.00',\
+               end_date='2015-05-01T12:00:00.00'):
+    """
+    Query the ASM old dimm archive (old DIMM available up to 2016-04-01),
+    saves the result in a csv file and returns the table as a panda data frame.
+    We limit the search to 1 000 000 lines. If more is expected, pay attention
+    Input:
+        - path: path where to save the csv table
+        - start_date: the date (and time) for the query start, in the isot format
+                    (for instance '2015-04-28T00:00:00.00')
+        - end_date: the date (and time) for the query end, in the isot format
+                    (for instance '2015-04-28T00:00:00.00')                    
+    """
+    filename = 'old_dimm_query_{0:s}_{1:s}.csv'.format(start_date,end_date)
+    request_asm_str = ['wget','-O',os.path.join(path,filename),\
+                       'http://archive.eso.org/wdb/wdb/asm/historical_ambient_paranal/query?wdbo=csv&start_date={0:s}..{1:s}&tab_fwhm=1&tab_airmass=0&tab_rfl=0&tab_tau=1&tab_tet=0&top=1000000'.format(\
+                        start_date,end_date)]    
+    output,error = subprocess.Popen(request_asm_str,stdout=subprocess.PIPE,stderr=subprocess.STDOUT).communicate()
+    print(' '.join(request_asm_str))
+    print(output.decode('UTF8'))
+    df = pd.read_csv(os.path.join(path,filename),skiprows=1,skipfooter=5,\
+                     parse_dates=True, index_col='Date time',\
+                     infer_datetime_format=True)
+    return df
+
 def query_mass(path,start_date='2017-04-28T00:00:00.00',\
                end_date='2017-05-01T12:00:00.00'):
     """
@@ -450,7 +475,6 @@ if __name__ == "__main__":
     end_date = '2018-10-28T00:00:00'
     # pd_ecmwf = query_ecmwf_jetstream(path_ecmwf,start_date,end_date)
 
-
     date_test = Time('2020-07-14T00:04:20.200')
     # test_coordinates = coord.SkyCoord.from_name('Lacaille 8760')
     test_coordinates = coord.SkyCoord.from_name('HIP 87937')
@@ -458,8 +482,15 @@ if __name__ == "__main__":
     simbad_dico = query_simbad(date_test,test_coordinates,name=None,debug=True)
     print(simbad_dico)
 
+    # other test
+    
+    target_name = 'SCrA'
+    coords = coord.SkyCoord(285.286528*u.degree,-36.95604*u.degree)
+    date = Time('2018-07-05T08:29:35.41')    
+    simbad_dico = query_simbad(date,coords,name=target_name,limit_G_mag=15)
+    # query_simbad(date,coords,name=None,debug=True,limit_G_mag=15):
 
     # radius = u.Quantity(12.0, u.arcsec)
     # j = Gaia.cone_search_async(test_coordinates, radius)
     # r = j.get_results()
-    # r.pprint()
+    # r.pprint()        

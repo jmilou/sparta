@@ -93,7 +93,6 @@ def plot_sparta_data(path_output=Path('.'),files=[],plot=True,verbose=True):
         hdu_list=fits.open(files[i])
         header = hdu_list[0].header
         try:
-#            if header['HIERARCH ESO DPR TYPE'] != 'OBJECT,AO':
             if header['HIERARCH ESO DPR TYPE'] != 'OBJECT,AO' or \
                     header['HIERARCH ESO OBS PROG ID'] == 'Maintenance' or \
                     len(hdu_list)<2:
@@ -313,6 +312,16 @@ def plot_sparta_data(path_output=Path('.'),files=[],plot=True,verbose=True):
             median_windSpeed= np.nanmedian(windSpeed[id_atmos])
             median_r0= np.nanmedian(r0[id_atmos])
             median_flux_VisLoop = np.nanmedian(flux_VisLoop_photons_per_subap_per_frame[id_VisWFS])
+
+            start_ob_list.append(start_tmp)
+            end_ob_list.append(end_tmp)
+            median_strehl_list.append(median_strehl)
+            median_seeing_list.append(median_seeing)
+            median_tau0_list.append(median_tau0)
+            median_windSpeed_list.append(median_windSpeed)
+            median_r0_list.append(median_r0)
+            median_flux_VisLoop_list.append(median_flux_VisLoop)            
+
             unique_freq,counts_freq = np.unique(freq_list[id_VisWFS],return_counts=True)
             most_used_freq = unique_freq[np.argmax(counts_freq)]
             unique_gain,counts_gain = np.unique(gain_list[id_VisWFS],return_counts=True)
@@ -322,17 +331,12 @@ def plot_sparta_data(path_output=Path('.'),files=[],plot=True,verbose=True):
                    start_tmp.value[11:],end_tmp.value[11:],median_strehl*100,\
                    median_seeing,median_tau0*1000,median_windSpeed,\
                    median_r0*100,median_flux_VisLoop,simbad_dico['simbad_FLUX_G'][i],most_used_freq,most_used_gain))
-            start_ob_list.append(start_tmp)
-            end_ob_list.append(end_tmp)
-            median_strehl_list.append(median_strehl)
-            median_seeing_list.append(median_seeing)
-            median_tau0_list.append(median_tau0)
-            median_windSpeed_list.append(median_windSpeed)
-            median_r0_list.append(median_r0)
-            median_flux_VisLoop_list.append(median_flux_VisLoop)            
-        except:
-            print('{0:s} from {1:s} to {2:s} ---%   --"   ---ms ----m/s  ---cm   ---ADU ----'.format(new_name[i].ljust(35),\
+
+        except Exception as e:
+            print('{0:s} (PROBLEMATIC) from {1:s} to {2:s} ---%   --"   ---ms ----m/s  ---cm   ---ADU ----'.format(new_name[i].ljust(21),\
                    start_tmp.value[11:],end_tmp.value[11:]))
+            if verbose:
+                print(e)
 
     time_file = Time(new_date_start_str) 
     nb_obs = len(new_name)
@@ -347,11 +351,12 @@ def plot_sparta_data(path_output=Path('.'),files=[],plot=True,verbose=True):
         current_night = current_night_datetime.date()
 
 
-    print('new_name',len(new_name))
-    print('start_ob_list',len(start_ob_list))
-    print('median_seeing_list',len(median_seeing_list))
-    print("simbad_dico['simbad_FLUX_V']",len(simbad_dico['simbad_FLUX_V']))
-    print("simbad_dico['simbad_FLUX_G']",len(simbad_dico['simbad_FLUX_G']))
+    if verbose:        
+        print('new_name is an array of size',len(new_name))
+        print('start_ob_list is an array of size',len(start_ob_list))
+        print('median_seeing_list is an array of size',len(median_seeing_list))
+        print("simbad_dico['simbad_FLUX_V'] is an array of size",len(simbad_dico['simbad_FLUX_V']))
+        print("simbad_dico['simbad_FLUX_G'] is an array of size",len(simbad_dico['simbad_FLUX_G']))
     pd_summary = pd.DataFrame({'OB_name':new_name,'start_UT':[str(st) for st in start_ob_list],\
                                'end_UT':[str(st) for st in end_ob_list],'strehl_sparta':median_strehl_list,\
                                'seeing_los_sparta':median_seeing_list,'tau0_los_sparta':median_tau0_list,\
@@ -967,7 +972,7 @@ if __name__ == "__main__":
         for f in files:
             try:
                 hdr = fits.getheader(f)
-                if 'OBJECT,AO' in hdr['HIERARCH ESO DPR TYPE']:
+                if 'OBJECT,AO' in hdr['HIERARCH ESO DPR TYPE'] :
                     good_files.append(f)
                     datetime_tmp = Time(hdr['DATE-OBS']).to_datetime()
                     if datetime_tmp.hour < 14:

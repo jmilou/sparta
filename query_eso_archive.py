@@ -39,7 +39,7 @@ def query_dimm(path,start_date='2017-04-28T00:00:00.00',\
                        start_date,end_date)]
     output,error = subprocess.Popen(request_asm_str,stdout=subprocess.PIPE,stderr=subprocess.STDOUT).communicate()
     print(' '.join(request_asm_str))
-    print(output.decode('UTF8'))
+    print(output.decode('ISO-8859-1'))
     df = pd.read_csv(os.path.join(path,filename),skiprows=1,skipfooter=5,\
                      parse_dates=True, index_col='Date time',\
                      infer_datetime_format=True)
@@ -64,7 +64,7 @@ def query_old_dimm(path,start_date='2015-04-28T00:00:00.00',\
                         start_date,end_date)]    
     output,error = subprocess.Popen(request_asm_str,stdout=subprocess.PIPE,stderr=subprocess.STDOUT).communicate()
     print(' '.join(request_asm_str))
-    print(output.decode('UTF8'))
+    print(output.decode('ISO-8859-1'))
     df = pd.read_csv(os.path.join(path,filename),skiprows=1,skipfooter=5,\
                      parse_dates=True, index_col='Date time',\
                      infer_datetime_format=True)
@@ -90,12 +90,59 @@ def query_mass(path,start_date='2017-04-28T00:00:00.00',\
                        start_date,end_date)]
     output,error = subprocess.Popen(request_asm_str,stdout=subprocess.PIPE,stderr=subprocess.STDOUT).communicate()
     print(' '.join(request_asm_str))
-    print(output.decode('UTF8'))
+    print(output.decode('ISO-8859-1'))
     df = pd.read_csv(os.path.join(path,filename),skiprows=1,skipfooter=5,\
                      parse_dates=True, index_col='Date time',\
                      infer_datetime_format=True)
     return df
 
+def query_slodar(path,start_date='2017-04-28T00:00:00.00',\
+               end_date='2017-05-01T12:00:00.00'):
+    """
+    Query the ASM slodar archive (available from April 2016 onwards,
+    saves the result in a csv file and returns the table as a panda data frame.
+    We limit the search to 1 000 000 lines. If more is expected, pay attention
+    Input:
+        - path: path where to save the csv table
+        - start_date: the date (and time) for the query start, in the isot format
+                    (for instance '2017-04-28T00:00:00.00')
+        - end_date: the date (and time) for the query end, in the isot format
+                    (for instance '2017-04-28T00:00:00.00')                    
+    """
+    filename = 'slodar_query_{0:s}_{1:s}.csv'.format(start_date,end_date)
+    request_slodar_str = ['wget','-O',os.path.join(path,filename),\
+                       'http://archive.eso.org/wdb/wdb/asm/slodar_paranal/query?wdbo=csv&start_date={0:s}..{1:s}&tab_cnsqs_uts=1&tab_fracgl300=1&tab_fracgl500=1&tab_fwhm=1&tab_hrsfit=1&top=1000000'.format(\
+                       start_date,end_date)]
+    output,error = subprocess.Popen(request_slodar_str,stdout=subprocess.PIPE,stderr=subprocess.STDOUT).communicate()
+    print(' '.join(request_slodar_str))
+    print(output.decode('ISO-8859-1'))
+    try:
+        slodar_df = pd.read_csv(os.path.join(path,filename),skiprows=1,skipfooter=5,\
+                         parse_dates=True, index_col='Date time',\
+                         infer_datetime_format=True)
+
+        if len(slodar_df.keys())<2:
+            print('No data to be read in the slodar file.')
+            raise IOError('Empty data in {0:s}'.format(os.path.join(path,filename)))
+        else:
+            print('The slodar file contains {0:d} values.'.format(len(slodar_df)))
+        slodar_df.rename(columns={'Seeing ["]':'Seeing [arcsec]'}, inplace=True)
+        lam = 500.e-9 # wavelength at which r0 is given
+        wave_nb=2*np.pi/lam
+        slodar_df['r0 above UT [m]'] = np.power(0.423*(wave_nb**2)*slodar_df['Cn2 above UTs [10**(-15)m**(1/3)]']*1.e-15,-3./5.)
+        slodar_df['Seeing above UT [arcsec]']= np.rad2deg(lam/slodar_df['r0 above UT [m]'])*3600.
+        slodar_df['Surface layer fraction'] = slodar_df['Surface layer profile [10**(-15)m**(1/3)]'] / slodar_df['Cn2 above UTs [10**(-15)m**(1/3)]']
+        slodar_df.to_csv(os.path.join(path,filename))            
+        return slodar_df
+    except ValueError as e:
+        print(e)
+        print('There is likely no data to be read in the slodar file {0:s}'.format(os.path.join(path,filename)))
+        return
+    except Exception as e:
+        print("Problem during the request")
+        print(type(e))
+        print(e)        
+        return
 
 def query_ecmwf_jetstream(path,start_date='2017-04-28T00:00:00.00',\
                end_date='2017-05-01T12:00:00.00'):
@@ -107,7 +154,11 @@ def query_ecmwf_jetstream(path,start_date='2017-04-28T00:00:00.00',\
         - start_date: the date (and time) for the query start, in the isot format
                     (for instance '2017-04-28T00:00:00.00')
         - end_date: the date (and time) for the query end, in the isot format
-                    (for instance '2017-04-28T00:00:00.00')                    
+                    (for instance '2017-04-28T00:00:00.00')        
+    Output:
+        panda table with the following keys: 
+            - 'date', in the iso format (e.g. 2018-10-27 06:00:00.000)
+            - 'ECMWF jetstream windspeed [m/s]' 
     """
     filename = 'ecmwf_jetstream_query_{0:s}_{1:s}.txt'.format(start_date,end_date)    
     request_asm_str = ['wget','-O',os.path.join(path,filename),\
@@ -115,17 +166,17 @@ def query_ecmwf_jetstream(path,start_date='2017-04-28T00:00:00.00',\
                        start_date,end_date)]
     output,error = subprocess.Popen(request_asm_str,stdout=subprocess.PIPE,stderr=subprocess.STDOUT).communicate()
     print(' '.join(request_asm_str))
-    print(output.decode('UTF8'))    
+    print(output.decode('ISO-8859-1'))    
     with open (os.path.join(path,filename), "r") as myfile:
         txt_string=myfile.read() #.replace('\n', '')
     txt_string = txt_string[txt_string.index('[[')+2:txt_string.index(']]')].split('],[')
-    dico={'date':[],'ecmwf_jetstream_windspeed_m/s':[]}
+    dico={'date':[],'ECMWF jetstream windspeed [m/s]':[]}
     for txt in txt_string:        
         date_str,speed_str = txt.split(',')
         time_tmp = Time(int(date_str)/1000.,format='unix')
-        time_tmp.format='isot'
+        time_tmp.format='iso'
         dico['date'].append(time_tmp)
-        dico['ecmwf_jetstream_windspeed_m/s'].append(float(speed_str))
+        dico['ECMWF jetstream windspeed [m/s]'].append(float(speed_str))
     pd_ecmwf = pd.DataFrame(dico)
     pd_ecmwf.to_csv(os.path.join(path,filename.replace('.txt','.csv')),index=False)
     return pd_ecmwf
@@ -199,7 +250,7 @@ def query_meteo(path,start_date='2017-04-28T00:00:00.00',\
                        start_date,end_date)]
     output,error = subprocess.Popen(request_asm_str,stdout=subprocess.PIPE,stderr=subprocess.STDOUT).communicate()
     print(' '.join(request_asm_str))
-    print(output.decode('UTF8'))
+    print(output.decode('ISO-8859-1'))
     df = pd.read_csv(os.path.join(path,filename),skiprows=1,skipfooter=5,engine='python')
     return df
 
@@ -465,16 +516,49 @@ def color(sp_type_str,filt='V-R'):
         return np.nan
     return float(col)
 
-if __name__ == "__main__":
-#    sp_type_str = 'M1.4'
-#    c=color(sp_type_str)
-#    print(c)
+def query_atmospheric_transparency(path,start_date='2017-04-28T00:00:00.00',\
+               end_date='2017-05-01T12:00:00.00'):
+    """
 
-    path_ecmwf = '/Users/jmilli/Documents/atmospheric_parameters/ECMW_forecast' 
+    Returns
+    -------
+    None.
+
+    """
+    tablename = os.path.join(path_data,'Paranal_weather_observations_2011-11-15_to_2019.csv')
+    # tablename = os.path.join(path_data,'Paranal_weather_observations_2011-11-15_to_2023-02-10.csv')
+    atm_transparency_table = pd.read_csv(tablename,parse_dates=['observation_timestamp'],\
+                             index_col='observation_timestamp',infer_datetime_format=True)
+        
+    # this needs to be cleaned, the data are not in a correct format.
+    # File Paranal_weather_observations_2019-10-04_2023-02-10.csv has to be cleaned first to be able to be parsed.
+    # atm_transparency_table2 = pd.read_csv(os.path.join(path_data,'Paranal_weather_observations_2019_to_2023-02-10.csv'),\
+    #                                       parse_dates=['observation_timestamp'],infer_datetime_format=True)
+    # atm_transparency_table2['Datetime'] = pd.to_datetime(atm_transparency_table2['observation_timestamp'],\
+    #                                                     format='%b %d %Y  %H:%M%p')
+    print('Function not finished yet')
+    return
+
+if __name__ == "__main__":
+
+    # test the color function
+    sp_type_str = 'M1.4'
+    c=color(sp_type_str)
+    print(c)
+
+    # test of the query_ecmwf_jetstream function
+    path_ecmwf = '/Users/millij/Documents/atmospheric_parameters/ECMW_forecast/test' 
     start_date = '2018-10-27T00:00:00'
     end_date = '2018-10-28T00:00:00'
-    # pd_ecmwf = query_ecmwf_jetstream(path_ecmwf,start_date,end_date)
+    pd_ecmwf = query_ecmwf_jetstream(path_ecmwf,start_date,end_date)
 
+    # test of the query_slodar function
+    path_slodar = '/Users/millij/Documents/atmospheric_parameters/SLODAR/test' 
+    start_date = '2018-10-27T00:00:00'
+    end_date = '2018-11-11T00:00:00'
+    pd_slodar = query_slodar(path_slodar,start_date,end_date)
+
+    # test of the query_simbad functions
     date_test = Time('2020-07-14T00:04:20.200')
     # test_coordinates = coord.SkyCoord.from_name('Lacaille 8760')
     test_coordinates = coord.SkyCoord.from_name('HIP 87937')
@@ -482,8 +566,7 @@ if __name__ == "__main__":
     simbad_dico = query_simbad(date_test,test_coordinates,name=None,debug=True)
     print(simbad_dico)
 
-    # other test
-    
+    # other test    
     target_name = 'SCrA'
     coords = coord.SkyCoord(285.286528*u.degree,-36.95604*u.degree)
     date = Time('2018-07-05T08:29:35.41')    

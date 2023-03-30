@@ -147,8 +147,10 @@ def query_slodar(path,start_date='2017-04-28T00:00:00.00',\
 def query_ecmwf_jetstream(path,start_date='2017-04-28T00:00:00.00',\
                end_date='2017-05-01T12:00:00.00'):
     """
-    Query the ESO ECMWF archive,
-    saves the result in a csv file and returns the table as a panda data frame.
+    Query the ESO ECMWF archive.
+    It saves the result in a csv file and returns the table as a panda data frame.
+    This service was maintained until 2020-12-31 and no data is available in
+    2021 or later.
     Input:
         - path: path where to save the csv table
         - start_date: the date (and time) for the query start, in the isot format
@@ -167,16 +169,26 @@ def query_ecmwf_jetstream(path,start_date='2017-04-28T00:00:00.00',\
     output,error = subprocess.Popen(request_asm_str,stdout=subprocess.PIPE,stderr=subprocess.STDOUT).communicate()
     print(' '.join(request_asm_str))
     print(output.decode('ISO-8859-1'))    
-    with open (os.path.join(path,filename), "r") as myfile:
-        txt_string=myfile.read() #.replace('\n', '')
-    txt_string = txt_string[txt_string.index('[[')+2:txt_string.index(']]')].split('],[')
     dico={'date':[],'ECMWF jetstream windspeed [m/s]':[]}
-    for txt in txt_string:        
-        date_str,speed_str = txt.split(',')
-        time_tmp = Time(int(date_str)/1000.,format='unix')
-        time_tmp.format='iso'
-        dico['date'].append(time_tmp)
-        dico['ECMWF jetstream windspeed [m/s]'].append(float(speed_str))
+    try:
+        with open (os.path.join(path,filename), "r") as myfile:
+            txt_string=myfile.read() #.replace('\n', '')
+        txt_string = txt_string[txt_string.index('[[')+2:txt_string.index(']]')].split('],[')
+        for txt in txt_string:        
+            date_str,speed_str = txt.split(',')
+            time_tmp = Time(int(date_str)/1000.,format='unix')
+            time_tmp.format='iso'
+            dico['date'].append(time_tmp)
+            dico['ECMWF jetstream windspeed [m/s]'].append(float(speed_str))
+    except ValueError as e:
+        print(e)
+        print('There is likely no data to be read in the ECMWF file {0:s}'.format(os.path.join(path,filename)))
+        return
+    except Exception as e:
+        print("Problem during the request")
+        print(type(e))
+        print(e)        
+        return
     pd_ecmwf = pd.DataFrame(dico)
     pd_ecmwf.to_csv(os.path.join(path,filename.replace('.txt','.csv')),index=False)
     return pd_ecmwf
@@ -516,28 +528,45 @@ def color(sp_type_str,filt='V-R'):
         return np.nan
     return float(col)
 
-def query_atmospheric_transparency(path,start_date='2017-04-28T00:00:00.00',\
+def query_atmospheric_transparency(start_date='2017-04-28T00:00:00.00',\
                end_date='2017-05-01T12:00:00.00'):
     """
+    For a given start and end date, returns the sub-table with the atmospheric
+    transparency entered by the weather officer in Paranal. The data are available 
+    from 2011-11-15 to 2023-02-09.    
+
+    Parameters
+    ----------
+    start_date : str, optional
+        start date for the query. The default is '2017-04-28T00:00:00.00'.
+    end_date : str, optional
+        end date for the query. The default is '2017-05-01T12:00:00.00'.
+
+    Raises
+    ------
+    ValueError
+        If start date or end date is out of the possible range, raise a ValueError.
 
     Returns
     -------
-    None.
-
+    panda DataFrame
+        Panda Dataframe with the following columns: ['author', 'weather_category', 'comment']
+        and a datetime index. The first entry of the table is earlier than start_date
+        and the last entry is later than end_date.
     """
-    tablename = os.path.join(path_data,'Paranal_weather_observations_2011-11-15_to_2019.csv')
-    # tablename = os.path.join(path_data,'Paranal_weather_observations_2011-11-15_to_2023-02-10.csv')
+    tablename = os.path.join(path_data,'Paranal_weather_observations_2011_to_2023.csv')
     atm_transparency_table = pd.read_csv(tablename,parse_dates=['observation_timestamp'],\
                              index_col='observation_timestamp',infer_datetime_format=True)
-        
-    # this needs to be cleaned, the data are not in a correct format.
-    # File Paranal_weather_observations_2019-10-04_2023-02-10.csv has to be cleaned first to be able to be parsed.
-    # atm_transparency_table2 = pd.read_csv(os.path.join(path_data,'Paranal_weather_observations_2019_to_2023-02-10.csv'),\
-    #                                       parse_dates=['observation_timestamp'],infer_datetime_format=True)
-    # atm_transparency_table2['Datetime'] = pd.to_datetime(atm_transparency_table2['observation_timestamp'],\
-    #                                                     format='%b %d %Y  %H:%M%p')
-    print('Function not finished yet')
-    return
+    dt_start_time = Time(start_date).to_datetime()
+    dt_end_time = Time(end_date).to_datetime()
+    if dt_start_time<atm_transparency_table.index[0]:
+        raise ValueError('The start date {0:s} is smaller than the earliest possible date {1:s}'.format(str(dt_start_time),str(atm_transparency_table.index[0])))
+    if dt_end_time>atm_transparency_table.index[-1]:
+        raise ValueError('The end date {0:s} is larger than the latest possible date {1:s}'.format(str(dt_end_time),str(atm_transparency_table.index[-1])))
+    atm_transparency_table.index[-1]
+    index_after_start = np.argmax((atm_transparency_table.index - dt_start_time).total_seconds()>0)
+    index_after_end = np.argmax((atm_transparency_table.index - Time(end_date).to_datetime()).total_seconds()>0)
+    return atm_transparency_table.iloc[index_after_start-1:index_after_end+1]
 
 if __name__ == "__main__":
 
@@ -548,10 +577,14 @@ if __name__ == "__main__":
 
     # test of the query_ecmwf_jetstream function
     path_ecmwf = '/Users/millij/Documents/atmospheric_parameters/ECMW_forecast/test' 
-    start_date = '2018-10-27T00:00:00'
-    end_date = '2018-10-28T00:00:00'
+    start_date = '2020-12-27T00:00:00'
+    end_date = '2020-12-28T00:00:00'
     pd_ecmwf = query_ecmwf_jetstream(path_ecmwf,start_date,end_date)
 
+    start_date = '2020-12-27T00:00:00'
+    end_date = '2020-12-28T00:00:00'
+    pd_transparency = query_atmospheric_transparency(start_date,end_date)
+    
     # test of the query_slodar function
     path_slodar = '/Users/millij/Documents/atmospheric_parameters/SLODAR/test' 
     start_date = '2018-10-27T00:00:00'
@@ -577,3 +610,5 @@ if __name__ == "__main__":
     # j = Gaia.cone_search_async(test_coordinates, radius)
     # r = j.get_results()
     # r.pprint()        
+        
+    
